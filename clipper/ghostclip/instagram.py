@@ -36,7 +36,7 @@ WORDS = {
              "Dalej", "İleri", "Volgende"],
     "share": ["Share", "Сподели", "Споделяне", "Compartir", "Partager", "Teilen", "Condividi", "Compartilhar",
               "Поделиться", "Udostępnij", "Paylaş", "Delen"],
-    "crop": ["Select crop", "Избор на изрязване", "Изрязване", "Seleccionar recorte", "Sélectionner le recadrage",
+    "crop": ["Select crop", "Crop", "Избор на изрязване", "Изберете изрязване", "Изрязване", "Seleccionar recorte", "Sélectionner le recadrage",
              "Zuschneiden auswählen", "Seleziona ritaglio", "Selecionar corte"],
     "original": ["Original", "Оригинал", "Originale", "Оригинальный", "Oryginał", "Orijinal"],
     "not_now": ["Not now", "Not Now", "Не сега", "Ahora no", "Plus tard", "Jetzt nicht", "Non ora", "Agora não",
@@ -222,12 +222,9 @@ class Instagram:
             self._click_any(page, "ok", 5000)            # "Video posts are now shared as reels"
 
             step = "choosing the crop"
-            try:                                          # keep the full 9:16 picture
-                page.locator(", ".join(f'svg[aria-label="{w}"]' for w in WORDS["crop"])).first.click(timeout=5000)
-                page.get_by_text(_any(WORDS["original"])).first.click(timeout=3000)
-                page.wait_for_timeout(600)
-            except Exception:
-                pass
+            say("Keeping the full vertical video...")
+            if not self._set_original_crop(page, dialog):
+                raise RuntimeError("couldn't set the crop to Original (Instagram would cut the video to a square)")
 
             # Press Next until the caption box shows up (Instagram has 1-3 screens before it).
             step = "the Next button"
@@ -276,6 +273,82 @@ class Instagram:
             shot = self._debug(page, name, step)
             say(f"Stopped at {step}. Finish it in the Instagram window (caption copied).")
             self.log(f"Instagram: couldn't finish posting {name} at {step}: {first}. Screenshot: {shot}")
+
+    def _set_original_crop(self, page, dialog) -> bool:
+        """Instagram's website crops new videos to a square unless 'Original' is picked. Pick it.
+
+        Open the crop menu (by its label, or by trying the small buttons at the bottom of the
+        preview until the menu with 1:1 / 4:5 / 16:9 shows up), then click the option that isn't
+        a ratio: that's 'Original' in every language.
+        """
+        ratio = re.compile(r"^\s*\d+\s*:\s*\d+\s*$")
+
+        def menu_open() -> bool:
+            try:
+                return dialog.get_by_text(re.compile(r"^\s*1\s*:\s*1\s*$")).first.is_visible()
+            except Exception:
+                return False
+
+        def pick_original() -> bool:
+            square = dialog.get_by_text(re.compile(r"^\s*1\s*:\s*1\s*$")).first
+            # the menu's options are siblings: walk up until the container holds 3+ options
+            options = page.evaluate("""(el) => {
+                let box = el;
+                for (let i = 0; i < 6 && box; i++) {
+                    box = box.parentElement;
+                    const texts = [...box.querySelectorAll('span,div')].filter(e => e.children.length === 0)
+                        .map(e => e.textContent.trim()).filter(Boolean);
+                    if (texts.filter(t => /^\\d+\\s*:\\s*\\d+$/.test(t)).length >= 2) return [...new Set(texts)];
+                }
+                return [];
+            }""", square.element_handle())
+            original = [o for o in options if not ratio.match(o) and len(o) < 20]
+            if not original:
+                return False
+            dialog.get_by_text(original[0], exact=True).first.click(timeout=4000)
+            page.wait_for_timeout(700)
+            self.log(f"Instagram: crop set to '{original[0]}'")
+            return True
+
+        # 1) the crop button by its label
+        for w in WORDS["crop"]:
+            btn = dialog.locator(f'svg[aria-label="{w}"]').first
+            if btn.count():
+                try:
+                    btn.click(timeout=4000)
+                    page.wait_for_timeout(700)
+                    if menu_open():
+                        return pick_original()
+                except Exception:
+                    pass
+        # 2) try the small icon buttons in the lower half of the preview
+        try:
+            box = dialog.last.bounding_box()
+        except Exception:
+            box = None
+        icons = dialog.locator("svg[aria-label]")
+        cands = []
+        for i in range(min(icons.count(), 40)):
+            el = icons.nth(i)
+            try:
+                b = el.bounding_box()
+            except Exception:
+                b = None
+            if not b or not box or b["width"] > 60:
+                continue
+            if b["y"] > box["y"] + box["height"] * 0.5:
+                cands.append((b["x"], el))
+        for _x, el in sorted(cands, key=lambda c: c[0]):
+            try:
+                el.click(timeout=3000)
+                page.wait_for_timeout(700)
+                if menu_open():
+                    return pick_original()
+                el.click(timeout=3000)   # not the crop button: undo (zoom slider / gallery)
+                page.wait_for_timeout(400)
+            except Exception:
+                continue
+        return False
 
     def _debug(self, page, name: str, step: str) -> str:
         """Save what the window looked like, plus the buttons on it, to fix the next version."""
