@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from . import framing, games
+from .analytics import Analytics, clean_handle
 from .instagram import Instagram
 from .captions import Transcriber
 from .engine import Engine
@@ -36,6 +37,7 @@ class App:
         self.quit_event = threading.Event()
         self.lock = threading.RLock()
         self.instagram = Instagram(self.log)
+        self.analytics = Analytics(self.s, self.instagram, self.log)
 
     # -- helpers ---------------------------------------------------------------
     def log(self, text: str) -> None:
@@ -168,7 +170,7 @@ class App:
             d = e.detector
             feed = [[m[3], m[4][:200], m[1] > 0] for m in list(d.recent)[-14:]]
             st.update({
-                "feed": feed,
+                "feed": feed, "recording": e.recorder.recording,
                 "chat": e.chat_status, "rate": d.rate_per_min(now), "score": round(d.score, 2),
                 "threshold": round(d.threshold, 2), "pending": e.pending, "clips": len(e.made),
                 "uptime": int(now - e.started), "in_moment": d.event is not None,
@@ -191,6 +193,7 @@ class App:
             "clips": self.clips(),
             "windows": os.name == "nt",
             "instagram": self.instagram.state(),
+            "analytics": self.analytics.summary(self.s.clips_dir),
             "games": games.choices(),
         }
 
@@ -343,8 +346,11 @@ class Handler(BaseHTTPRequestHandler):
                 app.s.games[c] = str(data.get("game") or "auto")
                 app.s.save()
             self._json({"ok": True})
+        elif path == "/api/analytics/refresh":
+            err = app.analytics.refresh()
+            self._json({"ok": err is None, "error": err})
         elif path == "/api/ig/open":
-            app.instagram.open_window()
+            app.instagram.open_window(data.get("url") or None)
             self._json({"ok": True})
         elif path == "/api/ig/post":
             clip = Path(app.s.clips_dir) / Path(data.get("file", "")).name
@@ -369,8 +375,12 @@ class Handler(BaseHTTPRequestHandler):
     def _apply(self, data: dict) -> None:
         app = self.app
         data = dict(data)
-        if data.get("twitch_oauth") == "set":
-            data.pop("twitch_oauth")
+        for secret in ("twitch_oauth", "youtube_api_key"):
+            if data.get(secret) == "set":
+                data.pop(secret)
+        for k in ("ig_username", "tiktok_handle", "youtube_handle"):
+            if k in data:
+                data[k] = clean_handle(str(data[k]))
         data.pop("channels", None)
         app.s.update(data)
         app.s.save()

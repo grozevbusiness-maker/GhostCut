@@ -45,9 +45,26 @@ folder you made. The default is `Videos\GhostClip\Clips`.
 3. Press **POST TO INSTAGRAM** under a clip. GhostClip posts it as a Reel with its caption and
    hashtags in that window, the way you would by hand, and marks the clip **✓ POSTED**.
 
-If Instagram shows something unexpected, GhostClip stops at that step and tells you. Finish the
+It works with Instagram in English, Bulgarian and other common languages. If Instagram shows
+something unexpected, GhostClip stops at that step and tells you, and saves a screenshot of the
+window in `%APPDATA%\GhostClip\instagram_debug` (send it over and the next version can handle it). Finish the
 post in the window yourself (the caption is already copied, just paste it). Keep it to a few posts
 a day: lots of automatic posts in a row can make Instagram suspicious of the account.
+
+## Analytics
+
+Open the **Analytics** tab, type your TikTok and YouTube names (Instagram uses the account
+logged in to the Instagram window), and press **Refresh stats**. You get total views, posts and
+followers across all three, views per platform, your top posts, and a chart of how your views grow
+(one point per day you refresh). TikTok and YouTube are read from your public profile pages in
+GhostClip's browser window. For exact YouTube numbers, add a free YouTube Data API key
+(Google Cloud Console → APIs & Services → enable "YouTube Data API v3" → Credentials → API key).
+
+## Other handy bits
+
+- The sun/moon button (top right) switches between light and dark mode.
+- While a clip is being made, a red flashing **Making a clip** badge shows at the top, the stream's
+  card says **CLIPPING**, and the browser tab title starts with 🔴.
 
 ## Updating
 
@@ -119,6 +136,7 @@ python tests/demo_dashboard.py          # dashboard with a fake stream and fake 
 | `ghostclip/captions.py` | faster-whisper word timings → styled ASS captions |
 | `ghostclip/framing.py` | Finds the face cam (bundled YuNet face model, MIT licence) |
 | `ghostclip/games.py` | Game list and hashtags |
-| `ghostclip/instagram.py` | Posts clips through a logged-in Chrome/Edge window (Playwright) |
+| `ghostclip/instagram.py` | The app's Chrome/Edge window: Instagram posting, runs stats jobs |
+| `ghostclip/analytics.py` | Reads Instagram, TikTok and YouTube stats for the Analytics tab |
 | `ghostclip/engine.py` | Runs one stream's session; clips from all streams are edited one at a time |
 | `ghostclip/web.py`, `dashboard.html` | Local dashboard on 127.0.0.1 |

@@ -74,6 +74,12 @@ class Settings:
     encoder: str = "auto"              # auto | nvenc | x264
     ffmpeg_path: str = ""              # leave empty to find ffmpeg automatically
 
+    # Analytics: your own accounts (where you post the clips)
+    ig_username: str = ""              # empty = the account logged in to the Instagram window
+    tiktok_handle: str = ""
+    youtube_handle: str = ""
+    youtube_api_key: str = ""          # optional; exact YouTube numbers via Google's API
+
     port: int = 8765
 
     @classmethod
@@ -134,6 +140,7 @@ class Settings:
     def to_dict(self) -> dict:
         d = asdict(self)
         d["twitch_oauth"] = "set" if self.twitch_oauth else ""
+        d["youtube_api_key"] = "set" if self.youtube_api_key else ""
         return d
 
 

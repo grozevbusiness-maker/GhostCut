@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GhostClip</title>
+<script>try{const t=localStorage.getItem("gc:theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root{
   --bg:#0b0a11; --surface:#16141f; --surface2:#1d1a29; --sunk:#0f0d16; --line:#2a2638; --line2:#363047;
@@ -12,10 +13,14 @@
   --ig1:#f58529; --ig2:#dd2a7b; --ig3:#8134af;
   --r:16px; --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px -12px rgba(0,0,0,.6);
 }
-@media (prefers-color-scheme:light){:root{
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
   --bg:#f4f2fa; --surface:#ffffff; --surface2:#f7f5fc; --sunk:#f0edf8; --line:#e2ddef; --line2:#d3cce6;
   --ink:#16131f; --muted:#5f5872; --faint:#8b85a0; --shadow:0 1px 2px rgba(30,10,60,.06),0 8px 24px -12px rgba(30,10,60,.18);
 }}
+:root[data-theme="light"]{
+  --bg:#f4f2fa; --surface:#ffffff; --surface2:#f7f5fc; --sunk:#f0edf8; --line:#e2ddef; --line2:#d3cce6;
+  --ink:#16131f; --muted:#5f5872; --faint:#8b85a0; --shadow:0 1px 2px rgba(30,10,60,.06),0 8px 24px -12px rgba(30,10,60,.18);
+}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:radial-gradient(1200px 600px at 10% -10%,color-mix(in srgb,var(--accent) 14%,transparent),transparent 60%),radial-gradient(900px 500px at 100% 0%,color-mix(in srgb,var(--hot) 9%,transparent),transparent 60%),var(--bg);
@@ -147,6 +152,56 @@ pre.log{margin:0;max-height:360px;overflow:auto;font:12px/1.55 ui-monospace,"Cas
 .panel ol{color:var(--muted);padding-left:20px;margin:10px 0 14px}
 .panel ol b{color:var(--ink)}
 .panel .st{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--sunk);border-radius:12px;font-weight:600;margin:12px 0}
+/* tabs, theme switch, clip-making badge */
+.tabs{display:flex;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.tabs button{border:0;background:none;padding:6px 14px;border-radius:9px;font-weight:700;color:var(--muted)}
+.tabs button.on{background:linear-gradient(135deg,var(--accent),var(--hot));color:#fff}
+.theme{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.theme svg{width:18px;height:18px}
+.making{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:99px;font-weight:700;font-size:13px;
+  color:#fff;background:color-mix(in srgb,var(--live) 85%,#000);box-shadow:0 0 0 0 var(--live);animation:glow 1.6s infinite}
+.making i{width:9px;height:9px;border-radius:50%;background:#fff;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.15}}
+@keyframes glow{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--live) 60%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+.dot.clipdot{background:var(--live);animation:blink 1s infinite}
+.scard .clipping{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:var(--live);letter-spacing:.02em}
+.scard .clipping i{width:7px;height:7px;border-radius:50%;background:var(--live);animation:blink 1s infinite}
+
+/* analytics */
+.acc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px;align-items:end}
+@media (max-width:1000px){.acc{grid-template-columns:1fr 1fr}}
+.acc label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.acc input{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-width:0}
+.acc input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.big b{font-size:32px}
+.plats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:1100px){.plats{grid-template-columns:1fr}}
+.plat{padding:16px;display:flex;flex-direction:column;gap:12px}
+.plat .ph{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
+.plat .ph small{color:var(--muted);font-weight:500;font-size:13px}
+.plogo{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:13px;flex:none}
+.plogo.instagram{background:linear-gradient(45deg,var(--ig1),var(--ig2),var(--ig3))}
+.plogo.tiktok{background:#111;box-shadow:inset 2px 0 #25f4ee,inset -2px 0 #fe2c55}
+.plogo.youtube{background:#ff0033}
+.plat .views{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plat .views span{font-size:13px;color:var(--muted);font-weight:600;letter-spacing:0}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mini div{background:var(--sunk);border-radius:10px;padding:8px 10px}
+.mini b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.mini span{font-size:11.5px;color:var(--muted)}
+.toplist{display:flex;flex-direction:column;gap:2px}
+.toplist a{display:flex;justify-content:space-between;gap:10px;padding:6px 8px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:13px}
+.toplist a:hover{background:var(--sunk)}
+.toplist a span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.toplist a b{font-variant-numeric:tabular-nums;flex:none}
+.pstatus{font-size:12px;color:var(--muted)}
+.pstatus.bad{color:var(--warn)}
+.share{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--sunk)}
+.share div{height:100%}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chartcard{padding:16px}
+.chartcard canvas{width:100%;height:220px;display:block}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:calc(100% - 32px)}
 .toast.on{opacity:1;transform:translateX(-50%)}
 </style>
@@ -154,14 +209,18 @@ pre.log{margin:0;max-height:360px;overflow:auto;font:12px/1.55 ui-monospace,"Cas
 <body>
 <header>
   <div class="logo"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></span>GhostClip</div>
+  <nav class="tabs"><button class="on" data-view="clipper">Clipper</button><button data-view="analytics">Analytics</button></nav>
   <span class="pill"><span class="dot" id="hdot"></span><span id="htext">Ready</span></span>
+  <span class="making" id="making" hidden><i></i><span id="makingText">Making a clip</span></span>
   <span class="sp"></span>
+  <button class="theme" id="themeBtn" title="Switch light / dark"></button>
   <button class="hbtn" id="igBtn"><span class="igmark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/></svg></span><span id="igBtnText">Instagram</span></button>
   <button class="hbtn" id="quit">Quit</button>
 </header>
 
 <main>
   <div class="banner" id="banner" hidden></div>
+<div id="viewClipper">
 
   <section class="summary">
     <div class="kpi"><span>Live now</span><b id="kLive">0</b></div>
@@ -177,6 +236,36 @@ pre.log{margin:0;max-height:360px;overflow:auto;font:12px/1.55 ui-monospace,"Cas
 
   <h2 class="sec">Clips <small id="clipsWhere"></small></h2>
   <div class="clips" id="clips"></div>
+
+</div>
+<div id="viewAnalytics" hidden>
+  <section class="card" style="padding:16px">
+    <div class="acc">
+      <div><label for="a_ig">Instagram</label><input id="a_ig" placeholder="leave empty: the logged-in account" spellcheck="false"></div>
+      <div><label for="a_tt">TikTok</label><input id="a_tt" placeholder="@yourname" spellcheck="false"></div>
+      <div><label for="a_yt">YouTube</label><input id="a_yt" placeholder="@yourchannel" spellcheck="false"></div>
+      <div><label for="a_key">YouTube API key (optional)</label><input id="a_key" type="password" placeholder="for exact YouTube numbers" spellcheck="false"></div>
+      <button class="btn grad" id="aRefresh">↻ Refresh stats</button>
+    </div>
+    <div class="hint" id="aHint">Stats are read in GhostClip's browser window. Log in to Instagram there first (Instagram button, top right).</div>
+  </section>
+  <section class="summary" style="margin-top:14px;grid-template-columns:repeat(5,minmax(0,1fr))">
+    <div class="kpi big"><span>Total views, all platforms</span><b id="aViews">–</b></div>
+    <div class="kpi"><span>Posts, all platforms</span><b id="aPosts">–</b></div>
+    <div class="kpi"><span>Followers, all platforms</span><b id="aFollowers">–</b></div>
+    <div class="kpi"><span>Clips GhostClip made</span><b id="aMade">0</b></div>
+    <div class="kpi"><span>Posted from GhostClip</span><b id="aPosted">0</b></div>
+  </section>
+  <section class="card" style="padding:16px;margin-top:14px">
+    <div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:10px"><span>Where your views come from</span><span class="hint" style="margin:0" id="aUpdated"></span></div>
+    <div class="share" id="aShare"></div>
+    <div class="legend" id="aLegend"></div>
+  </section>
+  <h2 class="sec">By platform</h2>
+  <div class="plats" id="aPlats"></div>
+  <h2 class="sec">Views over time <small>one point per day you refresh</small></h2>
+  <section class="card chartcard"><canvas id="aChart" width="1600" height="440"></canvas><div class="legend" id="aChartLegend"></div></section>
+</div>
 
   <div class="bottom">
     <details class="card" id="settings">
@@ -273,6 +362,7 @@ function buildCards(st){
     const c=document.createElement("div");c.className="card scard";c.dataset.ch=s.channel;
     c.innerHTML=`<div class="top"><span class="dot"></span>
         <div class="name"><a href="https://www.twitch.tv/${esc(s.channel)}" target="_blank" rel="noopener">${esc(s.channel)}</a></div>
+        <span class="clipping" hidden><i></i>CLIPPING</span>
         <button class="btn sm go">Start</button><button class="icon-btn cut" title="Clip the last 40 seconds now">✂</button><button class="x" title="Remove this stream">×</button></div>
       <select class="game" title="Game, for the hashtags">${st.games.map(([k,n])=>`<option value="${esc(k)}">${esc(n)}</option>`).join("")}</select>
       <div class="playing"></div>
@@ -311,10 +401,11 @@ function renderCards(st){
   let live=0,rate=0,clips=0,pend=0,waiting=0;
   for(const s of st.streams){
     const c=document.querySelector(`.scard[data-ch="${CSS.escape(s.channel)}"]`);if(!c)continue;
-    const running=s.state==="running",stopping=s.state==="stopping",rec=running&&/Recording/.test(s.status);
+    const running=s.state==="running",stopping=s.state==="stopping",rec=running&&s.recording;
     if(rec)live++;else if(running)waiting++;
     rate+=s.rate||0;clips+=s.clips||0;pend+=s.pending||0;
-    c.querySelector(".dot").className="dot"+(rec?" live":running||stopping?" wait":"");
+    c.querySelector(".dot").className="dot"+(s.pending?" clipdot":rec?" live":running||stopping?" wait":"");
+    c.querySelector(".clipping").hidden=!s.pending;
     const go=c.querySelector(".go");go.textContent=stopping?"Stopping…":running?"Stop":"Start";go.className="btn sm go"+(running?" stop":"");go.disabled=stopping;
     c.querySelector(".cut").disabled=!running;c.querySelector(".x").hidden=running||stopping;
     const sel=c.querySelector(".game");if(document.activeElement!==sel&&sel.value!==s.game)sel.value=s.game||"auto";
@@ -334,6 +425,8 @@ function renderCards(st){
   $("#hdot").className="dot"+(live?" live":waiting?" wait":"");
   $("#htext").textContent=live?`Recording ${live} stream${live>1?"s":""}`:waiting?`Waiting for ${waiting} to go live`:"Ready";
   $("#slots").textContent=`${st.streams.length} of ${st.max_streams}`;
+  $("#making").hidden=!pend;$("#makingText").textContent=pend>1?`Making ${pend} clips`:"Making a clip";
+  document.title=pend?`🔴 Making ${pend>1?pend+" clips":"a clip"} · GhostClip`:"GhostClip";
 }
 
 /* ---------- clips ---------- */
@@ -374,7 +467,7 @@ function renderIG(ig){
 function render(st){
   ST=st;S=st.settings;
   if(!formFilled){buildForm();fillForm(S);formFilled=true}
-  renderCards(st);renderClips(st);renderIG(st.instagram);
+  renderCards(st);renderClips(st);renderIG(st.instagram);renderAnalytics(st);
   $("#clipsWhere").innerHTML=`in <code>${esc(S.clips_dir)}</code> · <button class="link" data-open="clips">Open folder</button> · <button class="link" data-pick="clips_dir">Change</button>`;
   const lg=$("#log"),atBottom=lg.scrollHeight-lg.scrollTop-lg.clientHeight<30;lg.textContent=(st.log||[]).join("\n");if(atBottom)lg.scrollTop=lg.scrollHeight;
   const miss=[];if(!st.checks.ffmpeg)miss.push("ffmpeg");if(!st.checks.streamlink)miss.push("streamlink");if(!st.checks.whisper)miss.push("captions");if(!st.checks.facecam)miss.push("face cam finder");if(!st.instagram?.available)miss.push("Instagram posting");
@@ -430,6 +523,89 @@ document.addEventListener("click",async e=>{
     const r=await post("/api/ig/post",{file:c.file});toast(r.ok?"Posting to Instagram…":r.error);
   }
 });
+
+/* ---------- theme ---------- */
+const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==="dark":!matchMedia("(prefers-color-scheme: light)").matches};
+function themeIcon(){$("#themeBtn").innerHTML=isDark()?SUN:MOON;$("#themeBtn").title=isDark()?"Switch to light mode":"Switch to dark mode"}
+$("#themeBtn").onclick=()=>{const next=isDark()?"light":"dark";document.documentElement.dataset.theme=next;try{localStorage.setItem("gc:theme",next)}catch(e){};themeIcon();if(ST)render(ST)};
+themeIcon();
+
+/* ---------- tabs ---------- */
+function showView(v){
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
+  $("#viewClipper").hidden=v!=="clipper";$("#viewAnalytics").hidden=v!=="analytics";
+  try{localStorage.setItem("gc:view",v)}catch(e){}
+  if(ST)render(ST);
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+try{const v=localStorage.getItem("gc:view");if(v==="analytics")showView(v)}catch(e){}
+
+/* ---------- analytics ---------- */
+const PL={instagram:{name:"Instagram Reels",logo:"IG",color:"#dd2a7b",url:h=>`https://www.instagram.com/${h}/`},
+          tiktok:{name:"TikTok",logo:"TT",color:"#14b8c4",url:h=>`https://www.tiktok.com/@${h}`},
+          youtube:{name:"YouTube",logo:"▶",color:"#ff0033",url:h=>`https://www.youtube.com/@${h}`}};
+let accFilled=false;
+const n0=v=>v==null?"–":Number(v).toLocaleString();
+const nShort=v=>v==null?"–":v>=1e9?(v/1e9).toFixed(1)+"B":v>=1e6?(v/1e6).toFixed(1)+"M":v>=1e4?(v/1e3).toFixed(1)+"K":Number(v).toLocaleString();
+function ago(iso){if(!iso)return"";const s=(Date.now()-new Date(iso))/1000;return s<90?"just now":s<5400?Math.round(s/60)+" min ago":s<129600?Math.round(s/3600)+" h ago":Math.round(s/86400)+" days ago"}
+function renderAnalytics(st){
+  const a=st.analytics;if(!a)return;
+  if(!accFilled){$("#a_ig").value=S.ig_username||"";$("#a_tt").value=S.tiktok_handle||"";$("#a_yt").value=S.youtube_handle||"";$("#a_key").value=S.youtube_api_key||"";accFilled=true}
+  const running=a.running.length>0;
+  $("#aRefresh").disabled=running;$("#aRefresh").textContent=running?`Reading ${a.running.join(", ")}…`:"↻ Refresh stats";
+  if($("#viewAnalytics").hidden)return;
+  const P=a.platforms||{},ok=k=>P[k]&&P[k].ok;
+  const any=["instagram","tiktok","youtube"].some(ok);
+  $("#aViews").textContent=any?nShort(a.total.views):"–";$("#aViews").title=n0(a.total.views);
+  $("#aPosts").textContent=any?n0(a.total.posts):"–";$("#aFollowers").textContent=any?nShort(a.total.followers):"–";
+  $("#aMade").textContent=a.ghostclip.made;$("#aPosted").textContent=a.ghostclip.posted;
+  const ups=Object.values(P).map(p=>p.updated).filter(Boolean).sort();$("#aUpdated").textContent=ups.length?`Updated ${ago(ups[ups.length-1])}`:"Not refreshed yet";
+  // share bar
+  const tot=a.total.views||0;
+  $("#aShare").innerHTML=tot?Object.keys(PL).filter(ok).map(k=>`<div style="width:${(P[k].views||0)/tot*100}%;background:${PL[k].color}" title="${PL[k].name}: ${n0(P[k].views)}"></div>`).join(""):"";
+  $("#aLegend").innerHTML=Object.keys(PL).map(k=>`<span><i style="background:${PL[k].color}"></i>${PL[k].name}: <b style="color:var(--ink)">${ok(k)?nShort(P[k].views):"–"}</b>${ok(k)&&tot?` (${Math.round((P[k].views||0)/tot*100)}%)`:""}</span>`).join("");
+  // platform cards
+  $("#aPlats").innerHTML=Object.keys(PL).map(k=>{
+    const d=P[k]||{},cfg=a.configured.includes(k),busy=a.running.includes(k);
+    let mini="";
+    if(k==="youtube") mini=`<div><b>${n0(d.shorts)}</b><span>Shorts</span></div><div><b>${n0(d.videos)}</b><span>long videos</span></div><div><b>${nShort(d.followers)}</b><span>subscribers</span></div>`;
+    else if(k==="tiktok") mini=`<div><b>${n0(d.posts)}</b><span>videos</span></div><div><b>${nShort(d.followers)}</b><span>followers</span></div><div><b>${nShort(d.likes)}</b><span>likes</span></div>`;
+    else mini=`<div><b>${n0(d.posts)}</b><span>reels</span></div><div><b>${nShort(d.followers)}</b><span>followers</span></div><div><b>${nShort(d.likes)}</b><span>likes</span></div>`;
+    const extra=k==="youtube"&&d.ok?`<div class="pstatus">Shorts ${nShort(d.shorts_views)} views · long videos ${nShort(d.videos_views)} views</div>`:"";
+    const top=(d.top||[]).slice(0,5).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener"><span>${esc(x.title||"Post")}</span><b>${nShort(x.views)}</b></a>`).join("");
+    const status=busy?`<div class="pstatus">Reading…</div>`:!cfg&&!d.ok?`<div class="pstatus">Add your ${k==="instagram"?"Instagram login":k==="tiktok"?"TikTok name":"YouTube handle"} above to see this.</div>`:
+      d.error?`<div class="pstatus bad">Last try failed: ${esc(d.error)}${d.ok?" (showing the last good numbers)":""}</div>`:d.updated?`<div class="pstatus">Updated ${ago(d.updated)}</div>`:`<div class="pstatus">Press Refresh stats.</div>`;
+    return `<div class="card plat"><div class="ph"><span class="plogo ${k}">${PL[k].logo}</span><div>${PL[k].name}${d.handle?`<br><small><a href="${PL[k].url(d.handle)}" target="_blank" rel="noopener" style="color:inherit">@${esc(d.handle)}</a></small>`:""}</div></div>
+      <div class="views">${d.ok?nShort(d.views):"–"} <span>views</span></div><div class="mini">${mini}</div>${extra}
+      ${top?`<div><div class="hint" style="margin:0 0 4px">Top posts</div><div class="toplist">${top}</div></div>`:""}${status}</div>`}).join("");
+  drawHistory(a.history||[]);
+}
+function drawHistory(hist){
+  const cv=$("#aChart"),g=cv.getContext("2d"),W=cv.width,H=cv.height,cs=getComputedStyle(document.documentElement);
+  g.clearRect(0,0,W,H);
+  const mut=cs.getPropertyValue("--faint").trim(),line=cs.getPropertyValue("--line").trim(),acc=cs.getPropertyValue("--accent").trim();
+  const rows=hist.map(h=>({d:h.date,ig:h.instagram,tt:h.tiktok,yt:h.youtube,tot:(h.instagram||0)+(h.tiktok||0)+(h.youtube||0)}));
+  g.font="22px system-ui";g.fillStyle=mut;
+  if(rows.length<2){g.fillText(rows.length?"Refresh again on another day to see your views grow here.":"Press Refresh stats to start tracking.",30,H/2);$("#aChartLegend").innerHTML="";return}
+  const L=90,R=20,T=20,B=50,max=Math.max(...rows.map(r=>r.tot),1)*1.1;
+  const x=i=>L+(W-L-R)*i/(rows.length-1),y=v=>H-B-(H-T-B)*v/max;
+  g.strokeStyle=line;g.lineWidth=1;g.textAlign="right";
+  for(let k=0;k<=4;k++){const v=max*k/4,yy=y(v);g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.fillText(nShort(Math.round(v)),L-12,yy+7)}
+  g.textAlign="center";const step=Math.max(1,Math.ceil(rows.length/8));
+  rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)g.fillText(r.d.slice(5),x(i),H-14)});
+  const series=[["tot","All platforms",acc,5],["ig","Instagram","#dd2a7b",3],["tt","TikTok","#14b8c4",3],["yt","YouTube","#ff0033",3]];
+  for(const [k,,col,w] of series){g.strokeStyle=col;g.lineWidth=w;g.lineJoin="round";g.beginPath();let on=false;
+    rows.forEach((r,i)=>{if(r[k]==null){on=false;return}on?g.lineTo(x(i),y(r[k])):g.moveTo(x(i),y(r[k]));on=true});g.stroke()}
+  $("#aChartLegend").innerHTML=series.map(([,n,c])=>`<span><i style="background:${c}"></i>${n}</span>`).join("");
+}
+$("#aRefresh").onclick=async()=>{
+  const s={ig_username:$("#a_ig").value,tiktok_handle:$("#a_tt").value,youtube_handle:$("#a_yt").value};
+  if($("#a_key").value!=="set")s.youtube_api_key=$("#a_key").value;
+  await post("/api/settings",{settings:s});
+  const r=await post("/api/analytics/refresh");toast(r.ok?"Reading your stats… a browser window may open":r.error);
+};
 poll();
 </script>
 </body>
