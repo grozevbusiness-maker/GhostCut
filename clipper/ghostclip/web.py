@@ -41,6 +41,7 @@ class App:
         self.instagram = Instagram(self.log)
         self.thumb_lock = threading.Lock()
         self._clips_cache = None
+        self._checks_cache = None
         self.analytics = Analytics(self.s, self.instagram, self.log)
 
     # -- helpers ---------------------------------------------------------------
@@ -68,9 +69,16 @@ class App:
         return self._transcriber
 
     def checks(self) -> dict:
+        """What's installed. Looking takes ~20 ms (it searches the disk) and the dashboard asks
+        every second, so the answer is kept for 15 seconds (or until the ffmpeg setting changes)."""
+        cached = self._checks_cache
+        if cached and cached[0] == self.s.ffmpeg_path and time.time() - cached[1] < 15:
+            return cached[2]
         has = lambda m: importlib.util.find_spec(m) is not None  # noqa: E731
-        return {"ffmpeg": bool(self.ffmpeg()), "streamlink": has("streamlink"),
-                "whisper": has("faster_whisper"), "facecam": framing.available()}
+        out = {"ffmpeg": bool(self.ffmpeg()), "streamlink": has("streamlink"),
+               "whisper": has("faster_whisper"), "facecam": framing.available()}
+        self._checks_cache = (self.s.ffmpeg_path, time.time(), out)
+        return out
 
     def running(self) -> list[Engine]:
         return [e for e in self.engines.values() if e.state != "stopped"]

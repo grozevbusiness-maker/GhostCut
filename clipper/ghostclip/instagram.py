@@ -103,9 +103,13 @@ class Instagram:
         self.posts: dict[str, str] = {}   # clip file name -> what's happening with it
 
     # -- called from the dashboard (any thread) -----------------------------------
-    @staticmethod
-    def available() -> bool:
-        return importlib.util.find_spec("playwright") is not None
+    _has_playwright = False   # remembered once found: the dashboard asks every second
+
+    @classmethod
+    def available(cls) -> bool:
+        if not cls._has_playwright:
+            cls._has_playwright = importlib.util.find_spec("playwright") is not None
+        return cls._has_playwright
 
     def open_window(self, url: str | None = None) -> None:
         self._submit(("open", url))

@@ -103,7 +103,9 @@ class Recorder(threading.Thread):
         self.source_cmd = source_cmd
         self.parts: list[Part] = []
         self.session_dir = Path(settings.recordings_dir) / f"{settings.channel}_{datetime.now():%Y-%m-%d_%H-%M-%S}"
-        self._stop = threading.Event()
+        # Not "_stop": threading.Thread has its own _stop(), which join() and is_alive() call when
+        # the thread ends. Hiding it with an Event made both raise TypeError, so Stop never finished.
+        self._halt = threading.Event()
         self._procs: list[subprocess.Popen] = []
         self.lock = threading.Lock()
         self.holds: dict[int, float] = {}   # clip jobs still needing footage from this wall time on
@@ -111,7 +113,7 @@ class Recorder(threading.Thread):
 
     # -- public --------------------------------------------------------------
     def stop(self) -> None:
-        self._stop.set()
+        self._halt.set()
         procs = list(self._procs)
         for p in procs:
             try:
@@ -170,10 +172,10 @@ class Recorder(threading.Thread):
     # -- thread --------------------------------------------------------------
     def run(self) -> None:
         waiting_said = False
-        while not self._stop.is_set():
+        while not self._halt.is_set():
             started = time.time()
             got_data = self._record_part()
-            if self._stop.is_set():
+            if self._halt.is_set():
                 break
             if got_data:
                 self.on_status("Stream stopped or dropped. Watching for it to come back...")
@@ -184,7 +186,7 @@ class Recorder(threading.Thread):
                     self.on_status(f"Waiting for {self.s.channel} to go live...")
                     waiting_said = True
                 wait = max(5, 20 - (time.time() - started))
-            self._stop.wait(wait)
+            self._halt.wait(wait)
         self.recording = False
 
     def _source(self) -> list[str]:
@@ -207,7 +209,7 @@ class Recorder(threading.Thread):
         src = subprocess.Popen(self._source(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                creationflags=NO_WINDOW)
         self._procs.append(src)
-        if self._stop.is_set():
+        if self._halt.is_set():
             src.kill()
         first = src.stdout.read(188 * 64) if src.stdout else b""
         if not first:

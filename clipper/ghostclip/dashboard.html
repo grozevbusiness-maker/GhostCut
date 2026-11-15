@@ -5,73 +5,96 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GhostClip</title>
 <style>
-/* Quiet dark theme: graphite, bone-white text, hairline borders. Colour only means something:
-   brick = recording / clipping, amber = hype, sage = done. */
+/* Quiet dark theme: graphite, bone-white text, hairline borders, and a little warm light from
+   above (a soft wash at the top of the page, a faint highlight on the top edge of each card).
+   Colour only means something: brick = recording / clipping, amber = hype, sage = done. */
 :root{
   color-scheme:dark;
-  --bg:#0b0b0c; --surface:#121213; --surface2:#161617; --sunk:#0e0e0f; --line:#222224; --line2:#2f2f32;
-  --ink:#e6e3de; --muted:#8e8a84; --faint:#57544f;
-  --accent:#d8d3ca; --accent2:#b9b3a8; --hot:#a7825a;
-  --hype:#c39a4f; --live:#b5463d; --ok:#7f9a86; --warn:#b98a4a;
-  --chart:#9c978e; --chart-hot:#c39a4f; --chart-th:#4a4844;
+  --bg:#101012; --surface:#17171a; --surface2:#1e1e22; --sunk:#121215; --line:#28282d; --line2:#38383e;
+  --ink:#efece6; --muted:#a8a49c; --faint:#77736c;
+  --accent:#ece7dd; --accent2:#c6c0b4; --hot:#a7825a;
+  --hype:#d3a95a; --live:#c9564d; --ok:#93b59c; --warn:#cb9a58;
+  --chart:#b0aba1; --chart-hot:#d3a95a; --chart-th:#5a5752;
+  --glow:238,229,212;   /* the warm light, as r,g,b */
   --mono:"Cascadia Mono","Cascadia Code",ui-monospace,Consolas,monospace;
-  --r:6px;
+  --r:7px; --ease:cubic-bezier(.2,.7,.2,1);
 }
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);min-height:100vh;
   font:14px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-::selection{background:#3a3833}
+/* the light: its own fixed layer, so scrolling never repaints it */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(1200px 560px at 50% -220px,rgba(var(--glow),.10),transparent 72%)}
+::selection{background:#4a4740}
 button,input,select,textarea{font:inherit;color:inherit}
-button{cursor:pointer}
+button{cursor:pointer;transition:background-color .16s,border-color .16s,color .16s,box-shadow .16s,opacity .16s,transform .08s}
+button:active:not(:disabled){transform:translateY(1px)}
+input,select,textarea{transition:border-color .16s,background-color .16s}
 [hidden]{display:none!important}
 :focus-visible{outline:1px solid var(--accent);outline-offset:2px}
-::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#262628;border:3px solid var(--bg);border-radius:6px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2e2e33;border:3px solid var(--bg);border-radius:6px}::-webkit-scrollbar-thumb:hover{background:#3d3d43}::-webkit-scrollbar-track{background:transparent}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}}
+@keyframes fade{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
 /* small uppercase labels used throughout */
 .cap,.kpi span,.stats span,.mini span,.acc label,.set label,.chartwrap .lbl,h2.sec,.badge,.tabs button,.pill,.hint.cap{
   text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;font-weight:600}
 
 header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:18px;padding:0 28px;height:56px;
-  background:rgba(11,11,12,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  background:rgba(16,16,18,.86);backdrop-filter:blur(12px) saturate(1.2);border-bottom:1px solid var(--line)}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(var(--glow),.22) 30%,rgba(var(--glow),.22) 70%,transparent)}
 .logo{display:flex;align-items:center;gap:11px;font-weight:600;font-size:13px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink)}
-.logo .mark{width:22px;height:22px;display:grid;place-items:center;color:var(--ink);opacity:.9}
+.logo .mark{width:22px;height:22px;display:grid;place-items:center;color:var(--ink);filter:drop-shadow(0 0 6px rgba(var(--glow),.35))}
 .logo .mark svg{width:20px;height:20px}
 .pill{display:inline-flex;align-items:center;gap:8px;color:var(--muted)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
-.dot.live{background:var(--live);animation:breathe 2.4s ease-in-out infinite}
-.dot.wait{background:var(--warn)} .dot.ok{background:var(--ok)}
-@keyframes breathe{50%{opacity:.35}}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none;transition:background-color .3s,box-shadow .3s}
+.dot.live{background:var(--live);box-shadow:0 0 0 3px rgba(201,86,77,.16),0 0 10px rgba(201,86,77,.7);animation:breathe 2.4s ease-in-out infinite}
+.dot.wait{background:var(--warn);box-shadow:0 0 8px rgba(203,154,88,.45)}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px rgba(147,181,156,.5)}
+@keyframes breathe{50%{opacity:.4}}
 .sp{flex:1}
 .hbtn{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:var(--r);border:1px solid transparent;background:none;color:var(--muted);font-size:13px}
-.hbtn:hover{color:var(--ink);border-color:var(--line)}
+.hbtn:hover{color:var(--ink);border-color:var(--line2);background:rgba(255,255,255,.03)}
 .igmark{width:14px;height:14px;display:grid;place-items:center;flex:none;color:currentColor}
 .igmark svg{width:14px;height:14px}
 
 main{max-width:1760px;margin:0 auto;padding:28px 28px 64px}
 @media (max-width:700px){main{padding:18px 16px 40px} header{padding:10px 16px;height:auto;flex-wrap:wrap;gap:10px 14px}}
-.banner{margin-bottom:20px;padding:11px 14px;border-radius:var(--r);border:1px solid #4a3a26;background:#17130e;color:#d6b98e;font-size:13px}
+.banner{margin-bottom:20px;padding:11px 14px;border-radius:var(--r);border:1px solid #5a4630;background:#1c1710;color:#dcc095;font-size:13px}
+#viewClipper,#viewAnalytics{animation:rise .24s var(--ease)}
+
+/* the lit surface every panel shares: a faint highlight on the top edge, a soft shadow below */
+.card,.summary{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,0) 110px),var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 1px 2px rgba(0,0,0,.3),0 12px 28px -22px rgba(0,0,0,.8)}
 
 /* top strip: four numbers, then actions */
-.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);margin-bottom:6px}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;margin-bottom:6px}
+.summary.five{grid-template-columns:repeat(5,minmax(0,1fr));margin-top:16px}
 .summary>.kpi+.kpi{border-left:1px solid var(--line)}
-@media (max-width:1000px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.summary>.kpi:nth-child(3){border-left:0}
-  .summary>.kpi:nth-child(n+3){border-top:1px solid var(--line)}.summary .actions{grid-column:1/-1;border-top:1px solid var(--line)}}
+@media (max-width:1000px){.summary,.summary.five{grid-template-columns:repeat(2,minmax(0,1fr))}.summary>.kpi:nth-child(odd){border-left:0}
+  .summary>.kpi:nth-child(n+3){border-top:1px solid var(--line)}.summary .actions{grid-column:1/-1;border-top:1px solid var(--line)}
+  .summary.five>.kpi:first-child{grid-column:1/-1}.summary.five>.kpi:nth-child(n+2){border-top:1px solid var(--line)}
+  .summary.five>.kpi:nth-child(even){border-left:0}.summary.five>.kpi:nth-child(odd):not(:first-child){border-left:1px solid var(--line)}}
 .kpi{padding:16px 20px;min-width:0}
-.kpi span{display:block;color:var(--faint)}
+.kpi span{display:block;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi b{display:block;font:500 26px/1.2 var(--mono);letter-spacing:-.02em;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
 .actions{display:flex;gap:8px;align-items:center;padding:12px 16px;border-left:1px solid var(--line)}
 @media (max-width:1000px){.actions{border-left:0}}
 .actions .btn{flex:1}
 
-.btn{border:1px solid var(--line2);border-radius:var(--r);padding:9px 16px;font-weight:600;font-size:13px;background:var(--surface2);color:var(--ink);white-space:nowrap;transition:background .15s,border-color .15s}
-.btn:hover{background:#1d1d1f;border-color:#3c3c40}
+.btn{border:1px solid var(--line2);border-radius:var(--r);padding:9px 16px;font-weight:600;font-size:13px;background:var(--surface2);color:var(--ink);white-space:nowrap;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.btn:hover:not(:disabled){background:#26262b;border-color:#46464d}
 .btn:disabled{opacity:.4;cursor:default}
-.btn.grad{background:var(--accent);border-color:var(--accent);color:#111}
-.btn.grad:hover{background:#ece7de;border-color:#ece7de}
-.btn.ghost{background:transparent}
-.btn.stop{background:transparent;border-color:#5a2a25;color:#d98a80}
-.btn.stop:hover{background:#1e1211}
+.btn.grad{background:var(--accent);border-color:var(--accent);color:#141414;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 22px -12px rgba(var(--glow),.75)}
+.btn.grad:hover:not(:disabled){background:#fbf7ef;border-color:#fbf7ef;box-shadow:0 0 0 1px rgba(255,255,255,.1),0 8px 26px -10px rgba(var(--glow),.9)}
+.btn.ghost{background:transparent;box-shadow:none}
+.btn.ghost:hover:not(:disabled){background:rgba(255,255,255,.04)}
+.btn.stop{background:transparent;border-color:#6a312b;color:#e39a90;box-shadow:none}
+.btn.stop:hover:not(:disabled){background:#251413;border-color:#8a3d35}
 .btn.sm{padding:5px 11px;font-size:12.5px}
 .err{color:#d98a80;min-height:1.2em;margin:8px 2px;font-size:13px}
 
@@ -83,11 +106,12 @@ h2.sec code{color:var(--muted);font-family:var(--mono);font-size:11.5px;word-bre
 .link:hover{text-decoration-color:var(--ink)}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.card{min-width:0;transition:border-color .25s,box-shadow .4s}
 
 /* stream cards */
-.scard{padding:16px;display:flex;flex-direction:column;gap:12px;transition:border-color .4s}
-.scard.moment{border-color:#5e4a26}
+.scard{padding:16px;display:flex;flex-direction:column;gap:12px;animation:rise .3s var(--ease) backwards}
+.scard:hover,.clip:hover{border-color:var(--line2)}
+.scard.moment{border-color:#7a6030;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(211,169,90,.18),0 14px 44px -22px rgba(211,169,90,.75)}
 .scard .top{display:flex;align-items:center;gap:9px}
 .scard .name{flex:1;min-width:0;font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scard .name a{color:inherit;text-decoration:none}
@@ -95,7 +119,7 @@ h2.sec code{color:var(--muted);font-family:var(--mono);font-size:11.5px;word-bre
 .scard .x{background:none;border:0;color:var(--faint);font-size:18px;line-height:1;padding:2px 4px;border-radius:4px}
 .scard .x:hover{color:var(--ink)}
 .icon-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:var(--r);border:1px solid var(--line2);background:transparent;color:var(--muted);font-size:13px}
-.icon-btn:hover:not(:disabled){color:var(--ink);border-color:#3c3c40}
+.icon-btn:hover:not(:disabled){color:var(--ink);border-color:#46464d;background:rgba(255,255,255,.04)}
 .icon-btn:disabled{opacity:.35;cursor:default}
 select,.scard select{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;font-size:12.5px;color:var(--muted)}
 .scard select{width:100%}
@@ -116,17 +140,17 @@ select,.scard select{background:var(--sunk);border:1px solid var(--line);border-
 .feed .empty{color:var(--faint);text-align:center;white-space:normal;margin:auto 0;font-size:12px}
 .status{font-size:12px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .status.hot{color:var(--hype)}
-.addcard{display:flex;flex-direction:column;justify-content:center;gap:12px;padding:22px;border-style:dashed;border-color:var(--line2);background:transparent;min-height:220px}
+.addcard{display:flex;flex-direction:column;justify-content:center;gap:12px;padding:22px;border-style:dashed;border-color:var(--line2);background:transparent;box-shadow:none;min-height:220px}
 .addcard>b{font-weight:600;font-size:14px;color:var(--muted)}
 .addcard input{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
 .addcard input::placeholder,.acc input::placeholder{color:var(--faint)}
-.addcard input:focus,select:focus,.set input:focus,.set select:focus,.set textarea:focus,.acc input:focus{outline:none;border-color:#4a4844}
+.addcard input:focus,select:focus,.set input:focus,.set select:focus,.set textarea:focus,.acc input:focus{outline:none;border-color:#6a665e;background:#151518}
 .addcard p{margin:0;color:var(--faint);font-size:12px}
 
 /* clips */
 .clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
-.clip{overflow:hidden;display:flex;flex-direction:column}
-.clip video{width:100%;aspect-ratio:9/16;background:#050505;display:block;object-fit:contain;border-bottom:1px solid var(--line)}
+.clip{overflow:hidden;display:flex;flex-direction:column;animation:rise .3s var(--ease) backwards}
+.clip video{width:100%;aspect-ratio:9/16;background:#08080a;display:block;object-fit:contain;border-bottom:1px solid var(--line)}
 .clip.wide video{aspect-ratio:16/9}
 .clip .body{padding:12px;display:flex;flex-direction:column;gap:10px}
 .clip .t{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -139,12 +163,13 @@ select,.scard select{background:var(--sunk);border:1px solid var(--line);border-
 .badge.warn{color:var(--warn)}
 .row2{display:flex;gap:6px}
 .row2 button{flex:1;font-size:12px;padding:6px;border-radius:var(--r);border:1px solid var(--line);background:transparent;color:var(--muted)}
-.row2 button:hover{color:var(--ink);border-color:var(--line2)}
-.igpost{width:100%;border:1px solid var(--line2);border-radius:var(--r);padding:9px;font-weight:600;font-size:11px;letter-spacing:.14em;color:var(--ink);background:var(--surface2)}
-.igpost:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#111}
+.row2 button:hover{color:var(--ink);border-color:var(--line2);background:rgba(255,255,255,.03)}
+.igpost{width:100%;border:1px solid var(--line2);border-radius:var(--r);padding:9px;font-weight:600;font-size:11px;letter-spacing:.14em;color:var(--ink);background:var(--surface2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.igpost:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#141414;box-shadow:0 8px 22px -12px rgba(var(--glow),.75)}
 .igpost:disabled{opacity:.6;cursor:default}
-.igpost.done{background:transparent;color:var(--ok);border-color:#2c3a30}
-.igpost.done:hover:not(:disabled){background:transparent;color:var(--ok);border-color:#3e5244}
+.igpost.done{background:transparent;color:var(--ok);border-color:#34463a;box-shadow:none}
+.igpost.done:hover:not(:disabled){background:rgba(147,181,156,.06);color:var(--ok);border-color:#4a6452;box-shadow:none}
 .igstate{font-size:11.5px;color:var(--muted)}
 .igstate:empty{display:none}
 .empty-clips{grid-column:1/-1;text-align:center;padding:56px 16px;border:1px dashed var(--line2);border-radius:var(--r);color:var(--faint);font-size:13px}
@@ -174,8 +199,9 @@ input[type=range]{width:100%;accent-color:#a9a39a}
 pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);color:var(--faint);white-space:pre-wrap;word-break:break-word}
 
 /* Instagram panel */
-.overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.72);display:grid;place-items:center;padding:16px}
-.panel{width:min(500px,100%);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:24px}
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(6,6,8,.7);backdrop-filter:blur(3px);display:grid;place-items:center;padding:16px;animation:fade .16s ease-out}
+.panel{width:min(500px,100%);background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 120px),var(--surface);border:1px solid var(--line2);border-radius:9px;padding:24px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 30px 80px -30px rgba(0,0,0,.9);animation:rise .22s var(--ease)}
 .panel h3{margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600}
 .panel p{color:var(--muted);margin:10px 0;font-size:13px}
 .panel ol{color:var(--muted);padding-left:18px;margin:12px 0 14px;font-size:13px}
@@ -185,15 +211,16 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
 
 /* tabs, clip-making badge */
 .tabs{display:flex;gap:2px;align-self:stretch}
-.tabs button{border:0;background:none;padding:0 12px;color:var(--faint);border-bottom:1px solid transparent;margin-bottom:-1px}
+.tabs button{border:0;background:none;padding:0 12px;color:var(--faint);border-bottom:1px solid transparent;margin-bottom:-1px;position:relative;z-index:1}
 .tabs button:hover{color:var(--muted)}
-.tabs button.on{color:var(--ink);border-bottom-color:var(--ink)}
-.making{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border:1px solid #4d2622;border-radius:var(--r);
-  color:#d98a80;font-size:12px;background:#160e0d}
+.tabs button:active:not(:disabled){transform:none}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--ink);text-shadow:0 0 14px rgba(var(--glow),.45)}
+.making{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border:1px solid #5c2d28;border-radius:var(--r);
+  color:#e39a90;font-size:12px;background:#1d1211;animation:fade .2s ease-out}
 .making i{width:6px;height:6px;border-radius:50%;background:var(--live);animation:blink 1.1s infinite}
 @keyframes blink{50%{opacity:.15}}
 .dot.clipdot{background:var(--live);animation:blink 1.1s infinite}
-.scard .clipping{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:600;color:#d98a80;letter-spacing:.14em}
+.scard .clipping{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:600;color:#e39a90;letter-spacing:.14em}
 .scard .clipping i{width:5px;height:5px;border-radius:50%;background:var(--live);animation:blink 1.1s infinite}
 
 /* analytics */
@@ -233,8 +260,9 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
 .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:7px;vertical-align:0}
 .chartcard{padding:18px}
 .chartcard canvas{width:100%;height:220px;display:block}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:#1b1b1d;color:var(--ink);border:1px solid var(--line2);
-  padding:9px 16px;border-radius:var(--r);font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:50;max-width:calc(100% - 32px)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:#232327;color:var(--ink);border:1px solid #45454c;
+  padding:9px 16px;border-radius:var(--r);font-size:13px;opacity:0;transition:opacity .2s,transform .2s var(--ease);pointer-events:none;z-index:50;max-width:calc(100% - 32px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 16px 40px -18px rgba(0,0,0,.9)}
 .toast.on{opacity:1;transform:translateX(-50%)}
 </style>
 </head>
@@ -255,7 +283,7 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
 
   <section class="summary">
     <div class="kpi"><span>Live now</span><b id="kLive">0</b></div>
-    <div class="kpi"><span>Chat messages / min</span><b id="kRate">0</b></div>
+    <div class="kpi"><span title="Chat messages per minute, all streams">Chat / min</span><b id="kRate">0</b></div>
     <div class="kpi"><span>Clips this session</span><b id="kClips">0</b></div>
     <div class="kpi"><span>Clips being made</span><b id="kPend">0</b></div>
     <div class="actions"><button class="btn grad" id="startAll">Start all</button><button class="btn ghost" id="stopAll">Stop all</button></div>
@@ -280,12 +308,12 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
     </div>
     <div class="hint" id="aHint">Stats are read in GhostClip's browser window. Log in to Instagram there first (Instagram button, top right).</div>
   </section>
-  <section class="summary" style="margin-top:16px;grid-template-columns:repeat(5,minmax(0,1fr))">
-    <div class="kpi big"><span>Total views, all platforms</span><b id="aViews">–</b></div>
-    <div class="kpi"><span>Posts, all platforms</span><b id="aPosts">–</b></div>
-    <div class="kpi"><span>Followers, all platforms</span><b id="aFollowers">–</b></div>
-    <div class="kpi"><span>Clips GhostClip made</span><b id="aMade">0</b></div>
-    <div class="kpi"><span>Posted from GhostClip</span><b id="aPosted">0</b></div>
+  <section class="summary five" title="Views, posts and followers are added up across Instagram, TikTok and YouTube">
+    <div class="kpi big"><span>Total views</span><b id="aViews">–</b></div>
+    <div class="kpi"><span>Posts</span><b id="aPosts">–</b></div>
+    <div class="kpi"><span>Followers</span><b id="aFollowers">–</b></div>
+    <div class="kpi"><span>Clips made</span><b id="aMade">0</b></div>
+    <div class="kpi"><span>Posted from here</span><b id="aPosted">0</b></div>
   </section>
   <section class="card" style="padding:18px;margin-top:16px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span class="cap" style="color:var(--muted)">Where your views come from</span><span class="hint" style="margin:0" id="aUpdated"></span></div>
@@ -295,7 +323,7 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
   <h2 class="sec">By platform</h2>
   <div class="plats" id="aPlats"></div>
   <h2 class="sec">Views over time <small>one point per day you refresh</small></h2>
-  <section class="card chartcard"><canvas id="aChart" width="1600" height="440"></canvas><div class="legend" id="aChartLegend"></div></section>
+  <section class="card chartcard"><canvas id="aChart"></canvas><div class="legend" id="aChartLegend"></div></section>
 </div>
 
   <div class="bottom">
@@ -332,11 +360,27 @@ const $=s=>document.querySelector(s);
 const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const clean=v=>{v=(v||"").trim();const m=v.match(/twitch\.tv\/([A-Za-z0-9_]+)/);if(m)v=m[1];return v.replace(/^[#@]+/,"").trim().toLowerCase()};
 function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2600)}
-async function post(url,body={}){const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});return r.json()}
+async function post(url,body={}){
+  try{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});return await r.json()}
+  catch(e){return {ok:false,error:"GhostClip isn't answering. Is its black window still open?"}}
+  finally{soon()}   // show the result of the action right away, not on the next tick
+}
 async function act(url,body){$("#err").textContent="";const r=await post(url,body);if(!r.ok&&r.error)$("#err").textContent=r.error;return r}
 const fmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+"k":String(n);
 
-let ST=null,S=null,formFilled=false,cardKey=null,clipKey=null;
+/* The page is redrawn from /api/state every second. To keep that cheap and flicker-free, each
+   piece of the page is only touched when what it shows has changed. */
+const setText=(el,v)=>{v=String(v);if(el.textContent!==v)el.textContent=v};
+const setClass=(el,v)=>{if(el.className!==v)el.className=v};
+const changed=(el,key)=>{if(el._key===key)return false;el._key=key;return true};
+/* Size a canvas to its box in real screen pixels (sharp on any display). Returns the scale. */
+function fit(cv){
+  const r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2),w=Math.round(r.width*d),h=Math.round(r.height*d);
+  if(w&&h&&(cv.width!==w||cv.height!==h)){cv.width=w;cv.height=h;cv._key=null}
+  return d;
+}
+
+let ST=null,S=null,formFilled=false,cardKey=null;
 
 /* ---------- settings ---------- */
 const FIELDS=[
@@ -398,7 +442,7 @@ function buildCards(st){
       <select class="game" title="Game, for the hashtags">${st.games.map(([k,n])=>`<option value="${esc(k)}">${esc(n)}</option>`).join("")}</select>
       <div class="playing"></div>
       <div class="stats"><div><b class="rate">0</b><span>msgs / min</span></div><div><b class="hype">0%</b><span>hype</span></div><div><b class="nclips">0</b><span>clips</span></div></div>
-      <div class="chartwrap"><span class="lbl">Hype · last 2 min</span><canvas width="600" height="156"></canvas></div>
+      <div class="chartwrap"><span class="lbl">Hype · last 2 min</span><canvas></canvas></div>
       <div class="feed"><div class="empty">Chat shows up here once it's running</div></div>
       <div class="status">Not started</div>`;
     c.querySelector(".game").value=s.game||"auto";
@@ -412,100 +456,153 @@ function buildCards(st){
     box.appendChild(a);$("#addInput").value=keepAdd;
   }
 }
+const CSSV={};   // the chart colours, read from the stylesheet once
+const cssv=n=>CSSV[n]||(CSSV[n]=getComputedStyle(document.documentElement).getPropertyValue(n).trim());
 function drawChart(cv,hist){
-  const g=cv.getContext("2d"),W=cv.width,H=cv.height,cs=getComputedStyle(document.documentElement);
-  g.clearRect(0,0,W,H);if(!hist||hist.length<2)return;
-  const acc=cs.getPropertyValue("--chart").trim(),hot=cs.getPropertyValue("--chart-hot").trim(),mut=cs.getPropertyValue("--chart-th").trim();
+  const d=fit(cv),live=hist&&hist.length>1,last=live?hist[hist.length-1]:null;
+  if(!changed(cv,live?hist.length+"|"+last.join(","):"empty"))return;
+  const g=cv.getContext("2d"),W=cv.width,H=cv.height;
+  g.clearRect(0,0,W,H);if(!live)return;
+  const acc=cssv("--chart"),hot=cssv("--chart-hot"),mut=cssv("--chart-th");
   const max=Math.max(...hist.map(h=>Math.max(h[1],h[2]*1.15)),1);
-  const x=t=>W+(t/120)*W,y=v=>H-8-(v/max)*(H-36);
-  const grad=g.createLinearGradient(0,0,0,H);grad.addColorStop(0,acc+"2e");grad.addColorStop(1,acc+"00");
+  const x=t=>W+(t/120)*W,y=v=>H-4*d-(v/max)*(H-22*d);
+  const grad=g.createLinearGradient(0,0,0,H);grad.addColorStop(0,acc+"38");grad.addColorStop(1,acc+"00");
   g.beginPath();hist.forEach((h,i)=>i?g.lineTo(x(h[0]),y(h[1])):g.moveTo(x(h[0]),y(h[1])));
-  g.lineTo(x(hist[hist.length-1][0]),H);g.lineTo(x(hist[0][0]),H);g.closePath();g.fillStyle=grad;g.fill();
-  g.setLineDash([5,7]);g.strokeStyle=mut;g.lineWidth=1.5;g.beginPath();
+  g.lineTo(x(last[0]),H);g.lineTo(x(hist[0][0]),H);g.closePath();g.fillStyle=grad;g.fill();
+  g.setLineDash([3*d,4*d]);g.strokeStyle=mut;g.lineWidth=d;g.beginPath();
   hist.forEach((h,i)=>i?g.lineTo(x(h[0]),y(h[2])):g.moveTo(x(h[0]),y(h[2])));g.stroke();g.setLineDash([]);
-  g.lineWidth=2;g.lineJoin="round";g.lineCap="round";
-  for(let i=1;i<hist.length;i++){const a=hist[i-1],b=hist[i];g.strokeStyle=b[1]>=b[2]?hot:acc;g.beginPath();g.moveTo(x(a[0]),y(a[1]));g.lineTo(x(b[0]),y(b[1]));g.stroke()}
+  g.lineWidth=1.5*d;g.lineJoin="round";g.lineCap="round";
+  // the line, drawn as runs of one colour (calm, or amber while above the clip threshold)
+  let run=null;
+  for(let i=1;i<hist.length;i++){
+    const a=hist[i-1],b=hist[i],col=b[1]>=b[2]?hot:acc;
+    if(col!==run){if(run)g.stroke();g.beginPath();g.strokeStyle=col;g.moveTo(x(a[0]),y(a[1]));run=col}
+    g.lineTo(x(b[0]),y(b[1]));
+  }
+  if(run)g.stroke();
 }
 function renderCards(st){
   const key=st.streams.map(s=>s.channel).join("|");
   if(key!==cardKey){buildCards(st);cardKey=key}
-  let live=0,rate=0,clips=0,pend=0,waiting=0;
+  let live=0,rate=0,clips=0,pend=0,waiting=0,halting=0;
   for(const s of st.streams){
     const c=document.querySelector(`.scard[data-ch="${CSS.escape(s.channel)}"]`);if(!c)continue;
     const running=s.state==="running",stopping=s.state==="stopping",rec=running&&s.recording;
-    if(rec)live++;else if(running)waiting++;
+    if(rec)live++;else if(running)waiting++;else if(stopping)halting++;
     rate+=s.rate||0;clips+=s.clips||0;pend+=s.pending||0;
-    c.querySelector(".dot").className="dot"+(s.pending?" clipdot":rec?" live":running||stopping?" wait":"");
-    c.querySelector(".clipping").hidden=!s.pending;
-    const go=c.querySelector(".go");go.textContent=stopping?"Stopping…":running?"Stop":"Start";go.className="btn sm go"+(running?" stop":"");go.disabled=stopping;
-    c.querySelector(".cut").disabled=!running;c.querySelector(".x").hidden=running||stopping;
-    const sel=c.querySelector(".game");if(document.activeElement!==sel&&sel.value!==s.game)sel.value=s.game||"auto";
-    c.querySelector(".playing").textContent=s.category?`Playing ${s.category}${s.title?" · "+s.title:""}`:(s.game_name?`Hashtags: ${s.game_name}`:"");
-    c.querySelector(".rate").textContent=fmt(s.rate||0);
+    const q=c._q||(c._q=Object.fromEntries(["dot","clipping","go","cut","x","game","playing","rate","hype","nclips","canvas","feed","status"]
+      .map(k=>[k,c.querySelector(k==="canvas"?"canvas":"."+k)])));   // look the parts up once per card
+    setClass(q.dot,"dot"+(s.pending?" clipdot":rec?" live":running||stopping?" wait":""));
+    q.clipping.hidden=!s.pending;
+    setText(q.go,stopping?"Stopping…":running?"Stop":"Start");setClass(q.go,"btn sm go"+(running?" stop":""));q.go.disabled=stopping;
+    q.cut.disabled=!running;q.x.hidden=running||stopping;
+    if(document.activeElement!==q.game&&q.game.value!==(s.game||"auto"))q.game.value=s.game||"auto";
+    const playing=s.category?`Playing ${s.category}${s.title?" · "+s.title:""}`:(s.game_name?`Hashtags: ${s.game_name}`:"");
+    setText(q.playing,playing);if(q.playing.title!==playing)q.playing.title=playing;
+    setText(q.rate,fmt(s.rate||0));
     const pct=s.threshold?Math.round(Math.min(999,s.score/s.threshold*100)):0;
-    c.querySelector(".hype").textContent=(running?pct:0)+"%";c.querySelector(".nclips").textContent=s.clips||0;
+    setText(q.hype,(running?pct:0)+"%");setText(q.nclips,s.clips||0);
     c.classList.toggle("moment",!!s.in_moment);
-    drawChart(c.querySelector("canvas"),running?s.history:null);
-    const feed=c.querySelector(".feed");
-    if(running&&s.feed&&s.feed.length) feed.innerHTML=s.feed.map(([u,t,h])=>`<div class="${h?"h":""}"><b>${esc(u)}</b> ${esc(t)}</div>`).join("");
-    else feed.innerHTML=`<div class="empty">${running?esc(s.chat||"Connecting to chat…"):"Chat shows up here once it's running"}</div>`;
+    drawChart(q.canvas,running?s.history:null);
+    const lines=running&&s.feed&&s.feed.length?s.feed:null;
+    const empty=lines?"":running?(s.chat||"Connecting to chat…"):"Chat shows up here once it's running";
+    if(changed(q.feed,lines?JSON.stringify(lines):"empty:"+empty))
+      q.feed.innerHTML=lines?lines.map(([u,t,h])=>`<div class="${h?"h":""}"><b>${esc(u)}</b> ${esc(t)}</div>`).join(""):`<div class="empty">${esc(empty)}</div>`;
     let txt=s.in_moment?"Hype moment, clipping…":s.status;if(s.pending&&!s.in_moment)txt=`Making ${s.pending} clip${s.pending>1?"s":""} · `+txt;
-    const stEl=c.querySelector(".status");stEl.textContent=txt;stEl.title=txt;stEl.classList.toggle("hot",!!s.in_moment);
+    setText(q.status,txt);if(q.status.title!==txt)q.status.title=txt;q.status.classList.toggle("hot",!!s.in_moment);
   }
-  $("#kLive").textContent=live+(waiting?` · ${waiting} waiting`:"");$("#kRate").textContent=fmt(rate);$("#kClips").textContent=clips;$("#kPend").textContent=pend;
-  $("#hdot").className="dot"+(live?" live":waiting?" wait":"");
-  $("#htext").textContent=live?`Recording ${live} stream${live>1?"s":""}`:waiting?`Waiting for ${waiting} to go live`:"Ready";
-  $("#slots").textContent=`${st.streams.length} of ${st.max_streams}`;
-  $("#making").hidden=!pend;$("#makingText").textContent=pend>1?`Making ${pend} clips`:"Making a clip";
-  document.title=pend?`🔴 Making ${pend>1?pend+" clips":"a clip"} · GhostClip`:"GhostClip";
+  setText($("#kLive"),live+(waiting?` · ${waiting} waiting`:""));setText($("#kRate"),fmt(rate));setText($("#kClips"),clips);setText($("#kPend"),pend);
+  setClass($("#hdot"),"dot"+(live?" live":waiting||halting?" wait":""));
+  setText($("#htext"),live?`Recording ${live} stream${live>1?"s":""}`:waiting?`Waiting for ${waiting} to go live`:halting?`Stopping ${halting} stream${halting>1?"s":""}…`:"Ready");
+  setText($("#slots"),`${st.streams.length} of ${st.max_streams}`);
+  $("#making").hidden=!pend;setText($("#makingText"),pend>1?`Making ${pend} clips`:"Making a clip");
+  const title=pend?`🔴 Making ${pend>1?pend+" clips":"a clip"} · GhostClip`:"GhostClip";if(document.title!==title)document.title=title;
 }
 
 /* ---------- clips ---------- */
+const CLIPS=new Map();   // clip file name -> {el, c}: its card on the page and its latest data
+function clipCard(c,wide){
+  const t=c.time?new Date(c.time).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+  const kind={laugh:"funny",hype:"hype",clip:"clip it",manual:"manual"}[c.kind]||"clip";
+  const capWarn=c.captions&&/^failed/.test(c.captions)?`<span class="badge warn" title="${esc(c.captions)}">no captions</span>`:"";
+  const el=document.createElement("div");el.className="card clip"+(wide?" wide":"");
+  el.innerHTML=`<video src="${esc(c.url)}" poster="${esc(c.thumb)}" preload="none" controls playsinline></video>
+    <div class="body"><div class="t" title="${esc(c.file)}">${esc(c.channel||"")} <small>${esc(t)}</small></div>
+    <div class="badges"><span class="badge k-${esc(c.kind)}">${kind}</span>${c.game?`<span class="badge">${esc(c.game)}</span>`:""}${c.length?`<span class="badge">${Math.round(c.length)}s</span>`:""}${capWarn}</div>
+    <button class="igpost" data-ig="${esc(c.file)}">POST TO INSTAGRAM</button><div class="igstate"></div>
+    <div class="row2"><button data-copy="${esc(c.file)}">Copy caption</button><button data-file="${esc(c.file)}">Open file</button></div></div>`;
+  return el;
+}
 function renderClips(st){
-  const clips=st.clips||[],posts=(st.instagram||{}).posts||{},box=$("#clips");
-  const key=clips.map(c=>c.file).join("|");
-  if(key!==clipKey){
-    clipKey=key;
-    box.innerHTML=!clips.length?`<div class="empty-clips"><b>No clips yet</b>When chat goes wild (laughing, "LMAO", "KEKW", "CLIP IT") the clip shows up here, edited and captioned.</div>`:
-    clips.map((c,i)=>{
-      const t=c.time?new Date(c.time).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
-      const kind={laugh:"funny",hype:"hype",clip:"clip it",manual:"manual"}[c.kind]||"clip";
-      const capWarn=c.captions&&/^failed/.test(c.captions)?`<span class="badge warn" title="${esc(c.captions)}">no captions</span>`:"";
-      return `<div class="card clip${st.settings.layout==="original"?" wide":""}" data-i="${i}">
-        <video src="${esc(c.url)}" poster="${esc(c.thumb)}" preload="none" controls playsinline></video>
-        <div class="body"><div class="t">${esc(c.channel||"")} <small>${esc(t)}</small></div>
-        <div class="badges"><span class="badge k-${esc(c.kind)}">${kind}</span>${c.game?`<span class="badge">${esc(c.game)}</span>`:""}${c.length?`<span class="badge">${Math.round(c.length)}s</span>`:""}${capWarn}</div>
-        <button class="igpost" data-ig="${i}">POST TO INSTAGRAM</button><div class="igstate"></div>
-        <div class="row2"><button data-copy="${i}">Copy caption</button><button data-file="${esc(c.file)}">Open file</button></div></div></div>`}).join("");
-    box._clips=clips;
+  const clips=st.clips||[],posts=(st.instagram||{}).posts||{},box=$("#clips"),wide=st.settings.layout==="original";
+  // Add, remove and reorder cards in place. Cards that stay are never rebuilt, so a clip you are
+  // watching keeps playing when a new one arrives.
+  if(changed(box,clips.map(c=>c.file).join("|")+"|"+wide)){
+    if(!clips.length){
+      CLIPS.clear();
+      box.innerHTML=`<div class="empty-clips"><b>No clips yet</b>When chat goes wild (laughing, "LMAO", "KEKW", "CLIP IT") the clip shows up here, edited and captioned.</div>`;
+    }else{
+      box.querySelector(".empty-clips")?.remove();
+      const keep=new Set(clips.map(c=>c.file));
+      for(const [f,o] of CLIPS)if(!keep.has(f)){o.el.remove();CLIPS.delete(f)}
+      let at=box.firstElementChild;
+      for(const c of clips){
+        let o=CLIPS.get(c.file);
+        if(!o){o={el:clipCard(c,wide)};CLIPS.set(c.file,o)}
+        o.el.classList.toggle("wide",wide);
+        if(o.el===at)at=at.nextElementSibling;else box.insertBefore(o.el,at);
+      }
+    }
   }
-  box.querySelectorAll(".clip").forEach(el=>{
-    const c=clips[+el.dataset.i];if(!c)return;
-    const b=el.querySelector(".igpost"),s=el.querySelector(".igstate"),state=posts[c.file];
+  for(const c of clips){
+    const o=CLIPS.get(c.file);if(!o)continue;
+    o.c=c;
+    const b=o.b||(o.b=o.el.querySelector(".igpost")),s=o.s||(o.s=o.el.querySelector(".igstate")),state=posts[c.file];
     const busy=state&&!/Posted|Stopped|Couldn't|Log in/.test(state),done=c.instagram||(state&&/Posted/.test(state));
-    b.textContent=done?"✓ POSTED":busy?"POSTING…":"POST TO INSTAGRAM";b.classList.toggle("done",!!done);b.disabled=!!busy;
-    s.textContent=state&&!/Posted/.test(state)?state:"";
-  });
+    setText(b,done?"✓ POSTED":busy?"POSTING…":"POST TO INSTAGRAM");b.classList.toggle("done",!!done);b.disabled=!!busy;
+    setText(s,state&&state!=="Posted ✓"?state:"");
+  }
 }
 
 function renderIG(ig){
   if(!ig)return;const on=ig.window&&ig.logged_in;
-  $("#igBtnText").textContent="Instagram";$("#igBtn").title=on?"Instagram: logged in":"Instagram: not connected";
-  $("#igBtn").style.color=on?"var(--ink)":"";
-  $("#igDot").className="dot"+(on?" ok":ig.window?" wait":"");
-  $("#igStatus").textContent=!ig.available?"Instagram posting isn't installed yet. Close GhostClip and run update.bat.":(ig.status||"Not connected");
+  const b=$("#igBtn"),tip=on?"Instagram: logged in":"Instagram: not connected";
+  if(b.title!==tip){b.title=tip;b.style.color=on?"var(--ink)":""}
+  setClass($("#igDot"),"dot"+(on?" ok":ig.window?" wait":""));
+  setText($("#igStatus"),!ig.available?"Instagram posting isn't installed yet. Close GhostClip and run update.bat.":(ig.status||"Not connected"));
 }
 
 function render(st){
   ST=st;S=st.settings;
   if(!formFilled){buildForm();fillForm(S);formFilled=true}
   renderCards(st);renderClips(st);renderIG(st.instagram);renderAnalytics(st);
-  $("#clipsWhere").innerHTML=`in <code>${esc(S.clips_dir)}</code> · <button class="link" data-open="clips">Open folder</button> · <button class="link" data-pick="clips_dir">Change</button>`;
-  const lg=$("#log"),atBottom=lg.scrollHeight-lg.scrollTop-lg.clientHeight<30;lg.textContent=(st.log||[]).join("\n");if(atBottom)lg.scrollTop=lg.scrollHeight;
+  const where=$("#clipsWhere");   // rebuilt only when the folder changes, so its buttons never lose a click
+  if(changed(where,S.clips_dir))where.innerHTML=`in <code>${esc(S.clips_dir)}</code> · <button class="link" data-open="clips">Open folder</button> · <button class="link" data-pick="clips_dir">Change</button>`;
+  const lg=$("#log"),log=st.log||[];
+  if(changed(lg,log.length+"|"+(log[log.length-1]||""))){
+    const atBottom=lg.scrollHeight-lg.scrollTop-lg.clientHeight<30;lg.textContent=log.join("\n");if(atBottom)lg.scrollTop=lg.scrollHeight;
+  }
   const miss=[];if(!st.checks.ffmpeg)miss.push("ffmpeg");if(!st.checks.streamlink)miss.push("streamlink");if(!st.checks.whisper)miss.push("captions");if(!st.checks.facecam)miss.push("face cam finder");if(!st.instagram?.available)miss.push("Instagram posting");
-  $("#banner").hidden=!miss.length;if(miss.length)$("#banner").textContent=`Missing: ${miss.join(", ")}. Close GhostClip and double-click update.bat.`;
+  $("#banner").hidden=!miss.length;if(miss.length)setText($("#banner"),`Missing: ${miss.join(", ")}. Close GhostClip and double-click update.bat.`);
 }
-async function poll(){try{render(await (await fetch("/api/state",{cache:"no-store"})).json())}catch(e){$("#htext").textContent="App closed";$("#hdot").className="dot"}setTimeout(poll,1000)}
+
+/* One request at a time, once a second (slower while the tab is in the background). */
+let pollTimer=0,polling=false,again=false;
+async function poll(){
+  if(polling)return;
+  polling=true;again=false;clearTimeout(pollTimer);
+  let st=null;
+  try{st=await (await fetch("/api/state",{cache:"no-store"})).json()}
+  catch(e){setText($("#htext"),"App closed");setClass($("#hdot"),"dot")}
+  if(st){try{render(st)}catch(e){console.error(e)}}
+  polling=false;
+  pollTimer=setTimeout(poll,again?60:document.hidden?3000:1000);
+}
+/* Ask again straight away (after a button press, or when the tab comes back to the front). */
+function soon(){if(polling){again=true;return}clearTimeout(pollTimer);pollTimer=setTimeout(poll,60)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)soon()});
+let resizeTimer=0;
+addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(ST)render(ST)},120)});
 
 /* ---------- events ---------- */
 async function addStream(start){
@@ -520,7 +617,7 @@ $("#streams").addEventListener("click",async e=>{
   if(e.target.id==="addStart")return addStream(true);
   const card=e.target.closest(".scard"),b=e.target.closest("button");if(!card||!b)return;
   const ch=card.dataset.ch,s=ST.streams.find(x=>x.channel===ch);
-  if(b.classList.contains("go")){if(s&&s.state==="running")await act("/api/stop",{channel:ch});else await act("/api/start",{channel:ch,settings:readForm()})}
+  if(b.classList.contains("go")){b.disabled=true;if(s&&s.state==="running")await act("/api/stop",{channel:ch});else await act("/api/start",{channel:ch,settings:readForm()})}
   else if(b.classList.contains("cut")){const r=await post("/api/clip-now",{channel:ch});toast(r.ok?`Clipping the last 40 seconds of ${ch}…`:r.error)}
   else if(b.classList.contains("x")){await act("/api/remove",{channel:ch})}
 });
@@ -546,9 +643,9 @@ document.addEventListener("click",async e=>{
   }
   if(t.dataset.open){const r=await post("/api/open",{target:t.dataset.open});if(!r.ok)toast(r.error)}
   if(t.dataset.file){const r=await post("/api/open",{target:"clip",file:t.dataset.file});if(!r.ok)toast(r.error)}
-  if(t.dataset.copy){const c=$("#clips")._clips[+t.dataset.copy];try{await navigator.clipboard.writeText(c.post||c.file);toast("Caption copied")}catch{toast("Couldn't copy")}}
+  if(t.dataset.copy){const c=CLIPS.get(t.dataset.copy)?.c;if(!c)return;try{await navigator.clipboard.writeText(c.post||c.file);toast("Caption copied")}catch{toast("Couldn't copy")}}
   if(t.dataset.ig){
-    const c=$("#clips")._clips[+t.dataset.ig],ig=ST.instagram||{};
+    const c=CLIPS.get(t.dataset.ig)?.c,ig=ST.instagram||{};if(!c)return;
     if(c.instagram&&!confirm("This clip was already posted. Post it again?"))return;
     try{await navigator.clipboard.writeText(c.post||"")}catch{}
     if(!ig.available||!ig.window||!ig.logged_in){$("#igPanel").hidden=false;if(ig.available&&!ig.window)post("/api/ig/open");toast("Log in to Instagram first");return}
@@ -567,9 +664,9 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>showView(b.da
 try{const v=localStorage.getItem("gc:view");if(v==="analytics")showView(v)}catch(e){}
 
 /* ---------- analytics ---------- */
-const PL={instagram:{name:"Instagram Reels",logo:"IG",color:"#a8667a",url:h=>`https://www.instagram.com/${h}/`},
-          tiktok:{name:"TikTok",logo:"TT",color:"#5e918f",url:h=>`https://www.tiktok.com/@${h}`},
-          youtube:{name:"YouTube",logo:"YT",color:"#a65a50",url:h=>`https://www.youtube.com/@${h}`}};
+const PL={instagram:{name:"Instagram Reels",logo:"IG",color:"#bb7b8f",url:h=>`https://www.instagram.com/${h}/`},
+          tiktok:{name:"TikTok",logo:"TT",color:"#6fa5a3",url:h=>`https://www.tiktok.com/@${h}`},
+          youtube:{name:"YouTube",logo:"YT",color:"#bb6b60",url:h=>`https://www.youtube.com/@${h}`}};
 let accFilled=false;
 const n0=v=>v==null?"–":Number(v).toLocaleString();
 const nShort=v=>v==null?"–":v>=1e9?(v/1e9).toFixed(1)+"B":v>=1e6?(v/1e6).toFixed(1)+"M":v>=1e4?(v/1e3).toFixed(1)+"K":Number(v).toLocaleString();
@@ -578,14 +675,20 @@ function renderAnalytics(st){
   const a=st.analytics;if(!a)return;
   if(!accFilled){$("#a_ig").value=S.ig_username||"";$("#a_tt").value=S.tiktok_handle||"";$("#a_yt").value=S.youtube_handle||"";$("#a_key").value=S.youtube_api_key||"";accFilled=true}
   const running=a.running.length>0;
-  $("#aRefresh").disabled=running;$("#aRefresh").textContent=running?`Reading ${a.running.join(", ")}…`:"Refresh stats";
+  const rb=$("#aRefresh");
+  if(!rb._busy){rb.disabled=running;setText(rb,running?`Reading ${a.running.join(", ")}…`:"Refresh stats")}
   if($("#viewAnalytics").hidden)return;
   const P=a.platforms||{},ok=k=>P[k]&&P[k].ok;
   const any=["instagram","tiktok","youtube"].some(ok);
-  $("#aViews").textContent=any?nShort(a.total.views):"–";$("#aViews").title=n0(a.total.views);
-  $("#aPosts").textContent=any?n0(a.total.posts):"–";$("#aFollowers").textContent=any?nShort(a.total.followers):"–";
-  $("#aMade").textContent=a.ghostclip.made;$("#aPosted").textContent=a.ghostclip.posted;
-  const ups=Object.values(P).map(p=>p.updated).filter(Boolean).sort();$("#aUpdated").textContent=ups.length?`Updated ${ago(ups[ups.length-1])}`:"Not refreshed yet";
+  setText($("#aViews"),any?nShort(a.total.views):"–");
+  setText($("#aPosts"),any?n0(a.total.posts):"–");setText($("#aFollowers"),any?nShort(a.total.followers):"–");
+  setText($("#aMade"),a.ghostclip.made);setText($("#aPosted"),a.ghostclip.posted);
+  const ups=Object.values(P).map(p=>p.updated).filter(Boolean).sort();setText($("#aUpdated"),ups.length?`Updated ${ago(ups[ups.length-1])}`:"Not refreshed yet");
+  // Everything below is rebuilt only when the numbers change (or once a minute, for the "x min ago"
+  // texts), so links keep their hover and a click on one is never lost.
+  drawHistory(a.history||[]);
+  if(!changed($("#aPlats"),JSON.stringify([P,a.running,a.configured,a.total])+Math.floor(Date.now()/60000)))return;
+  $("#aViews").title=n0(a.total.views)+" views";
   // share bar
   const tot=a.total.views||0;
   $("#aShare").innerHTML=tot?Object.keys(PL).filter(ok).map(k=>`<div style="width:${(P[k].views||0)/tot*100}%;background:${PL[k].color}" title="${PL[k].name}: ${n0(P[k].views)}"></div>`).join(""):"";
@@ -604,31 +707,43 @@ function renderAnalytics(st){
     return `<div class="card plat"><div class="ph"><span class="plogo ${k}">${PL[k].logo}</span><div>${PL[k].name}${d.handle?`<br><small><a href="${PL[k].url(d.handle)}" target="_blank" rel="noopener" style="color:inherit">@${esc(d.handle)}</a></small>`:""}</div></div>
       <div class="views">${d.ok?nShort(d.views):"–"} <span>views</span></div><div class="mini">${mini}</div>${extra}
       ${top?`<div><div class="cap" style="color:var(--faint);margin:0 0 4px">Top posts</div><div class="toplist">${top}</div></div>`:""}${status}</div>`}).join("");
-  drawHistory(a.history||[]);
 }
 function drawHistory(hist){
-  const cv=$("#aChart"),g=cv.getContext("2d"),W=cv.width,H=cv.height,cs=getComputedStyle(document.documentElement);
+  const cv=$("#aChart"),d=fit(cv);
+  if(!changed(cv,JSON.stringify(hist)))return;
+  const g=cv.getContext("2d"),W=cv.width,H=cv.height;
   g.clearRect(0,0,W,H);
-  const mut=cs.getPropertyValue("--faint").trim(),line=cs.getPropertyValue("--line").trim(),acc=cs.getPropertyValue("--accent").trim();
+  const mut=cssv("--faint"),line=cssv("--line"),acc=cssv("--accent");
   const rows=hist.map(h=>({d:h.date,ig:h.instagram,tt:h.tiktok,yt:h.youtube,tot:(h.instagram||0)+(h.tiktok||0)+(h.youtube||0)}));
-  g.font='20px "Cascadia Mono",Consolas,monospace';g.fillStyle=mut;
-  if(rows.length<2){g.fillText(rows.length?"Refresh again on another day to see your views grow here.":"Press Refresh stats to start tracking.",30,H/2);$("#aChartLegend").innerHTML="";return}
-  const L=90,R=20,T=20,B=50,max=Math.max(...rows.map(r=>r.tot),1)*1.1;
+  g.font=`${11*d}px "Cascadia Mono",Consolas,monospace`;g.fillStyle=mut;g.textAlign="left";
+  if(rows.length<2){g.fillText(rows.length?"Refresh again on another day to see your views grow here.":"Press Refresh stats to start tracking.",4*d,H/2);$("#aChartLegend").innerHTML="";return}
+  const L=46*d,R=10*d,T=10*d,B=26*d,max=Math.max(...rows.map(r=>r.tot),1)*1.1;
   const x=i=>L+(W-L-R)*i/(rows.length-1),y=v=>H-B-(H-T-B)*v/max;
-  g.strokeStyle=line;g.lineWidth=1;g.textAlign="right";
-  for(let k=0;k<=4;k++){const v=max*k/4,yy=y(v);g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.fillText(nShort(Math.round(v)),L-12,yy+7)}
+  g.strokeStyle=line;g.lineWidth=d;g.textAlign="right";
+  for(let k=0;k<=4;k++){const v=max*k/4,yy=Math.round(y(v))+.5;g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.fillText(nShort(Math.round(v)),L-7*d,yy+4*d)}
   g.textAlign="center";const step=Math.max(1,Math.ceil(rows.length/8));
-  rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)g.fillText(r.d.slice(5),x(i),H-14)});
-  const series=[["tot","All platforms",acc,3],["ig","Instagram",PL.instagram.color,2],["tt","TikTok",PL.tiktok.color,2],["yt","YouTube",PL.youtube.color,2]];
-  for(const [k,,col,w] of series){g.strokeStyle=col;g.lineWidth=w;g.lineJoin="round";g.beginPath();let on=false;
+  rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)g.fillText(r.d.slice(5),x(i),H-7*d)});
+  const series=[["ig","Instagram",PL.instagram.color,1.5],["tt","TikTok",PL.tiktok.color,1.5],["yt","YouTube",PL.youtube.color,1.5],["tot","All platforms",acc,2]];
+  for(const [k,,col,w] of series){g.strokeStyle=col;g.lineWidth=w*d;g.lineJoin="round";g.lineCap="round";g.beginPath();let on=false;
     rows.forEach((r,i)=>{if(r[k]==null){on=false;return}on?g.lineTo(x(i),y(r[k])):g.moveTo(x(i),y(r[k]));on=true});g.stroke()}
-  $("#aChartLegend").innerHTML=series.map(([,n,c])=>`<span><i style="background:${c}"></i>${n}</span>`).join("");
+  $("#aChartLegend").innerHTML=[series[3],...series.slice(0,3)].map(([,n,c])=>`<span><i style="background:${c}"></i>${n}</span>`).join("");
 }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 $("#aRefresh").onclick=async()=>{
-  const s={ig_username:$("#a_ig").value,tiktok_handle:$("#a_tt").value,youtube_handle:$("#a_yt").value};
+  const rb=$("#aRefresh"),s={ig_username:$("#a_ig").value,tiktok_handle:$("#a_tt").value,youtube_handle:$("#a_yt").value};
   if($("#a_key").value!=="set")s.youtube_api_key=$("#a_key").value;
-  await post("/api/settings",{settings:s});
-  const r=await post("/api/analytics/refresh");toast(r.ok?"Reading your stats… a browser window may open":r.error);
+  rb._busy=true;rb.disabled=true;
+  try{
+    await post("/api/settings",{settings:s});
+    const ig=ST&&ST.instagram;
+    if(ig&&ig.available&&!ig.window){
+      // GhostClip only knows which Instagram account is logged in once its window is open
+      setText(rb,"Opening the Instagram window…");
+      await post("/api/ig/open");
+      for(let i=0;i<20&&!(ST.instagram.window&&ST.instagram.logged_in!=null);i++)await sleep(500);
+    }
+    const r=await post("/api/analytics/refresh");toast(r.ok?"Reading your stats… a browser tab may open for a moment":r.error);
+  }finally{rb._busy=false;if(ST)render(ST)}
 };
 poll();
 </script>

@@ -68,33 +68,38 @@ class Engine:
         self.state = "stopping"
 
         def finish():
-            with self.lock:
-                ev = self.detector.force_finish(time.time())
-            if ev:
-                self._queue_event(ev)
-            # let the recorder catch up on footage the last clip needs
-            if self.pending:
-                self._status("Finishing the last clip before stopping...")
-                deadline = time.time() + self.s.post_roll + 20
-                while self.pending and time.time() < deadline:
+            try:
+                with self.lock:
+                    ev = self.detector.force_finish(time.time())
+                if ev:
+                    self._queue_event(ev)
+                # let the recorder catch up on footage the last clip needs
+                if self.pending:
+                    self._status("Finishing the last clip before stopping...")
+                    deadline = time.time() + self.s.post_roll + 20
+                    while self.pending and time.time() < deadline:
+                        time.sleep(0.5)
+                self._stop.set()
+                self.chat.stop()
+                self.recorder.stop()
+                self.recorder.join(timeout=60)
+                if self.recorder.is_alive():
+                    self.log("The recorder didn't shut down; keeping its files instead of deleting them")
+                self.jobs.put(None)
+                while self.pending:
                     time.sleep(0.5)
-            self._stop.set()
-            self.chat.stop()
-            self.recorder.stop()
-            self.recorder.join(timeout=60)
-            if self.recorder.is_alive():
-                self.log("The recorder didn't shut down; keeping its files instead of deleting them")
-            self.jobs.put(None)
-            while self.pending:
-                time.sleep(0.5)
-            if self.s.keep_full_recording:
-                self._status("Saving the full stream recording...")
-            saved = self.recorder.finalize() if not self.recorder.is_alive() else []
-            for p in saved:
-                self.log(f"Full stream saved: {p}")
-            self.state = "stopped"
-            self._status("Stopped")
-            done()
+                if self.s.keep_full_recording:
+                    self._status("Saving the full stream recording...")
+                saved = self.recorder.finalize() if not self.recorder.is_alive() else []
+                for p in saved:
+                    self.log(f"Full stream saved: {p}")
+            except Exception as e:   # never leave the stream stuck on "Stopping..."
+                self._stop.set()
+                self.log(f"Problem while stopping ({e.__class__.__name__}: {e}). Its recording files were kept.")
+            finally:
+                self.state = "stopped"
+                self._status("Stopped")
+                done()
 
         threading.Thread(target=finish, daemon=True, name="stopper").start()
 

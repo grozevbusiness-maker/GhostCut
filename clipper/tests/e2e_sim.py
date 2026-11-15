@@ -31,15 +31,15 @@ class SimChat(threading.Thread):
     def __init__(self, channel, on_message, on_status):
         super().__init__(daemon=True)
         self.on_message, self.on_status = on_message, on_status
-        self._stop = threading.Event()
+        self._halt = threading.Event()   # not "_stop": that name belongs to threading.Thread
 
     def stop(self):
-        self._stop.set()
+        self._halt.set()
 
     def run(self):
         self.on_status("Reading chat (simulated)")
         rnd, t0 = random.Random(3), time.time()
-        while not self._stop.wait(0.25):
+        while not self._halt.wait(0.25):
             t = time.time() - t0
             burst = BURST_AT <= t < BURST_AT + 10
             if burst and SimChat.burst_wall is None:
@@ -64,10 +64,13 @@ def main():
     root = Path(tempfile.mkdtemp(prefix="ghostclip_e2e_"))
     s = Settings(channel="testchannel", clips_dir=str(root / "clips"), recordings_dir=str(root / "rec"),
                  pre_roll=20, post_roll=6, min_clip=20, cooldown=20, layout=layout)
+    # Name a font file on Windows: ffmpeg builds there often can't find a default font by themselves.
+    font = next((f for f in (Path(r"C:\Windows\Fonts\arial.ttf"), Path(r"C:\Windows\Fonts\segoeui.ttf")) if f.is_file()), None)
+    fontfile = "fontfile='" + font.as_posix().replace(":", r"\:") + "':" if font else ""
     src = [ff, "-hide_banner", "-loglevel", "error", "-re",
            "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30",
            "-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000",
-           "-vf", "drawtext=text='%{localtime}':fontsize=64:fontcolor=white:box=1:boxcolor=black@0.6:x=40:y=40",
+           "-vf", f"drawtext={fontfile}text='%{{localtime}}':fontsize=64:fontcolor=white:box=1:boxcolor=black@0.6:x=40:y=40",
            "-c:v", "libx264", "-preset", "ultrafast", "-g", "60", "-c:a", "aac", "-f", "mpegts", "pipe:1"]
     logs = []
     eng = Engine(s, ff, FakeTranscriber(), lambda m: (logs.append(m), print(time.strftime("%H:%M:%S"), m)),
@@ -78,7 +81,8 @@ def main():
         time.sleep(1)
     done = threading.Event()
     eng.stop(done.set)
-    done.wait(120)
+    stopped = done.wait(120)
+    print("stopped cleanly:", stopped, "| state:", eng.state)
     clips = sorted((root / "clips").glob("*.mp4"))
     print("\nburst wall time:", time.strftime("%H:%M:%S", time.localtime(SimChat.burst_wall or 0)))
     print("clips:", [c.name for c in clips])
@@ -87,7 +91,7 @@ def main():
     left = [str(p.relative_to(root)) for p in (root / "rec").rglob("*")]
     print("left in recordings folder:", left or "nothing")
     print("ROOT", root)
-    return 0 if clips else 1
+    return 0 if clips and stopped and not left else 1
 
 
 if __name__ == "__main__":

@@ -49,22 +49,22 @@ class TwitchChat(threading.Thread):
         self.channel = channel.lower()
         self.on_message = on_message
         self.on_status = on_status
-        self._stop = threading.Event()
+        self._halt = threading.Event()   # not "_stop": that name belongs to threading.Thread
         self.connected = False
 
     def stop(self) -> None:
-        self._stop.set()
+        self._halt.set()
 
     def run(self) -> None:
         backoff = 2
-        while not self._stop.is_set():
+        while not self._halt.is_set():
             try:
                 self._session()
                 backoff = 2
             except (OSError, ssl.SSLError) as e:
                 self.connected = False
                 self.on_status(f"Chat disconnected ({e.__class__.__name__}), reconnecting in {backoff}s")
-            if self._stop.wait(backoff):
+            if self._halt.wait(backoff):
                 break
             backoff = min(backoff * 2, 60)
 
@@ -79,7 +79,7 @@ class TwitchChat(threading.Thread):
                 )
                 buf = b""
                 last_rx = time.time()
-                while not self._stop.is_set():
+                while not self._halt.is_set():
                     try:
                         data = sock.recv(65536)
                     except socket.timeout:
