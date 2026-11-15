@@ -7,6 +7,7 @@ time can be turned into a position in the video even after ads, lag or reconnect
 """
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import threading
@@ -19,6 +20,16 @@ from typing import Callable
 from .utils import NO_WINDOW, run, streamlink_cmd
 
 SEGMENT_SECONDS = 10
+
+
+def fetch_meta(channel: str) -> tuple[str, str]:
+    """(category, title) of a live Twitch stream, or ("", "") if offline/unknown."""
+    try:
+        r = run(streamlink_cmd() + ["--json", f"https://www.twitch.tv/{channel}"], timeout=45)
+        md = (json.loads(r.stdout or "{}").get("metadata") or {})
+        return (md.get("category") or "").strip(), (md.get("title") or "").strip()
+    except Exception:
+        return "", ""
 
 
 @dataclass

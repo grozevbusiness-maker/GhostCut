@@ -14,7 +14,7 @@ from .captions import Transcriber
 from .chat import ChatMessage, TwitchChat
 from .editor import ClipEditor
 from .hype import HypeDetector, HypeEvent
-from .recorder import Recorder
+from .recorder import Recorder, fetch_meta
 
 _ids = itertools.count(1)
 RENDER_LOCK = threading.Lock()   # with several streams, edit one clip at a time so the PC keeps up
@@ -49,6 +49,8 @@ class Engine:
         self.chat_status = "Connecting to chat..."
         self._stop = threading.Event()
         self.started = time.time()
+        self.category = ""   # what Twitch says they're streaming, e.g. "Fortnite"
+        self.title = ""
 
     # -- lifecycle -------------------------------------------------------------
     def start(self) -> None:
@@ -57,6 +59,8 @@ class Engine:
         self.chat.start()
         threading.Thread(target=self._ticker, daemon=True, name="ticker").start()
         threading.Thread(target=self._worker, daemon=True, name="clipper").start()
+        if not self.recorder.source_cmd:
+            threading.Thread(target=self._meta_loop, daemon=True, name="meta").start()
 
     def stop(self, done: Callable[[], None] = lambda: None) -> None:
         if self.state != "running":
@@ -116,6 +120,21 @@ class Engine:
         self.log("Manual clip of the last ~%ds queued" % (self.s.pre_roll + 10))
 
     # -- loops -----------------------------------------------------------------
+    def _meta_loop(self) -> None:
+        """Ask Twitch what the stream is playing: at the start, then every 10 minutes."""
+        wait = 0
+        while not self._stop.wait(wait):
+            cat, title = fetch_meta(self.s.channel)
+            if cat and cat != self.category:
+                self.log(f"Streaming: {cat}")
+            if cat:
+                self.category, self.title = cat, title
+                try:
+                    self.s.category = cat   # the editor reads it for hashtags
+                except AttributeError:
+                    pass
+            wait = 600 if cat else 60
+
     def _ticker(self) -> None:
         while not self._stop.wait(1.0):
             if self.state != "running":

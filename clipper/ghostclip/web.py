@@ -14,7 +14,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from . import framing
+from . import framing, games
+from .instagram import Instagram
 from .captions import Transcriber
 from .engine import Engine
 from .settings import MAX_STREAMS, ChannelView, Settings, app_dir, clean_channel
@@ -34,6 +35,7 @@ class App:
         self.chat_source = chat_source
         self.quit_event = threading.Event()
         self.lock = threading.RLock()
+        self.instagram = Instagram(self.log)
 
     # -- helpers ---------------------------------------------------------------
     def log(self, text: str) -> None:
@@ -157,10 +159,16 @@ class App:
 
     def stream_state(self, channel: str, now: float) -> dict:
         e = self.engines.get(channel)
-        st = {"channel": channel, "state": e.state if e else "stopped", "status": e.status if e else "Not started"}
+        choice = self.s.games.get(channel, "auto")
+        category = e.category if e else ""
+        st = {"channel": channel, "state": e.state if e else "stopped", "status": e.status if e else "Not started",
+              "game": choice, "game_name": games.resolve(choice, category)[0], "category": category,
+              "title": e.title if e else ""}
         if e:
             d = e.detector
+            feed = [[m[3], m[4][:200], m[1] > 0] for m in list(d.recent)[-14:]]
             st.update({
+                "feed": feed,
                 "chat": e.chat_status, "rate": d.rate_per_min(now), "score": round(d.score, 2),
                 "threshold": round(d.threshold, 2), "pending": e.pending, "clips": len(e.made),
                 "uptime": int(now - e.started), "in_moment": d.event is not None,
@@ -182,6 +190,8 @@ class App:
             "log": list(self.logs)[-100:],
             "clips": self.clips(),
             "windows": os.name == "nt",
+            "instagram": self.instagram.state(),
+            "games": games.choices(),
         }
 
     def pick_folder(self, current: str) -> str | None:
@@ -317,9 +327,41 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True})
             else:
                 self._json({"ok": False, "error": "Not found yet"})
+        elif path in ("/api/add", "/api/remove"):
+            c = clean_channel(ch)
+            with app.lock:
+                chans = [x for x in app.s.channels if x != c]
+                if path == "/api/add" and c:
+                    if len(chans) >= MAX_STREAMS:
+                        return self._json({"ok": False, "error": f"You can have up to {MAX_STREAMS} streams"})
+                    chans.append(c)
+                app.set_channels(chans)
+            self._json({"ok": True})
+        elif path == "/api/game":
+            c = clean_channel(ch)
+            if c:
+                app.s.games[c] = str(data.get("game") or "auto")
+                app.s.save()
+            self._json({"ok": True})
+        elif path == "/api/ig/open":
+            app.instagram.open_window()
+            self._json({"ok": True})
+        elif path == "/api/ig/post":
+            clip = Path(app.s.clips_dir) / Path(data.get("file", "")).name
+            if not clip.is_file():
+                return self._json({"ok": False, "error": "Clip not found"})
+            caption = data.get("caption") or ""
+            if not caption:
+                try:
+                    caption = json.loads(clip.with_suffix(".json").read_text(encoding="utf-8")).get("post", "")
+                except (OSError, ValueError):
+                    caption = ""
+            app.instagram.post(clip, caption)
+            self._json({"ok": True})
         elif path == "/api/quit":
             self._json({"ok": True})
             app.log("Quitting: finishing clips first...")
+            app.instagram.close()
             app.stop_all(done=app.quit_event.set)
         else:
             self.send_error(404)

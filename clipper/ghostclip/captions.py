@@ -64,8 +64,9 @@ class Transcriber:
         return words
 
     def _pass(self, wav_path: str, vad: bool) -> list[Word]:
+        # Hand the model raw samples: faster-whisper's own file reader (PyAV) breaks with newer PyAV versions.
         segments, _info = self._model.transcribe(
-            wav_path, language=self.language or None, word_timestamps=True, vad_filter=vad,
+            read_wav(wav_path), language=self.language or None, word_timestamps=True, vad_filter=vad,
             beam_size=5, condition_on_previous_text=False,
         )
         words = []
@@ -76,6 +77,18 @@ class Transcriber:
                 if w.word.strip():
                     words.append(Word(float(w.start), float(w.end), w.word.strip()))
         return words
+
+
+def read_wav(path: str):
+    """16 kHz mono 16-bit WAV (as ffmpeg writes it) -> float32 samples in [-1, 1]."""
+    import wave
+
+    import numpy as np
+    with wave.open(path, "rb") as w:
+        if w.getsampwidth() != 2 or w.getnchannels() != 1 or w.getframerate() != 16000:
+            raise ValueError("expected 16 kHz mono 16-bit audio")
+        data = w.readframes(w.getnframes())
+    return np.frombuffer(data, dtype="<i2").astype(np.float32) / 32768.0
 
 
 def _size(model: str) -> str:

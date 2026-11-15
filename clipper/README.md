@@ -1,6 +1,6 @@
 # GhostClip: automatic Twitch clipper
 
-GhostClip records up to 5 Twitch streams at once on your PC, reads their chats as they happen,
+GhostClip records up to 10 Twitch streams at once on your PC, reads their chats as they happen,
 and when chat goes wild (laughing, `LMFAO`, `KEKW`, 😂💀, `W W W`, "CLIP IT") it cuts that moment
 into a 30–90 second clip. It makes the clip fill a phone screen (streamer's face cam on top, the
 middle of the stream below), adds word-by-word captions of what the streamer says, and saves it to
@@ -18,7 +18,11 @@ your clips folder, ready for TikTok, Shorts or Reels.
 
 1. Double-click **GhostClip** on your desktop. A black window opens (keep it open) and the
    dashboard opens in your browser.
-2. Type up to 5 channel names (or paste twitch.tv links) and press **Start** on each, or **Start all**.
+2. In the **Add a stream** card, type a channel name (or paste a twitch.tv link) and press
+   **Add & start**. Add up to 10. Each stream gets its own card with live chat, messages per
+   minute and a hype chart. **Start all** / **Stop all** control every stream at once.
+   - Pick the **game** on each card (or leave it on *Auto*, which reads it from Twitch). The
+     game's popular hashtags are added to that stream's post captions.
    - You can press Start before the stream begins. GhostClip waits and starts recording
      the moment the streamer goes live. If the stream drops and comes back, it carries on.
    - GhostClip records the stream by itself, so you don't need Twitch open in your browser.
@@ -27,12 +31,23 @@ your clips folder, ready for TikTok, Shorts or Reels.
    - `name.mp4`: the finished clip
    - `name.txt`: a ready-to-paste post caption and hashtags, what was said, and what chat spammed
    - `clips_log.csv`: a list of every clip
-4. Missed something chat didn't react to? Press **✂** on that stream's row to clip its last 40 seconds.
+4. Missed something chat didn't react to? Press **✂** on that stream's card to clip its last 40 seconds.
 5. When a stream is over, press its **Stop** (or **Stop all**). GhostClip finishes any clip in progress, then
    deletes the recording. Only your clips are kept.
 
 **Choosing your folder:** click **Change** next to "Clips" (or open **Settings**) and pick the
 folder you made. The default is `Videos\GhostClip\Clips`.
+
+## Posting to Instagram
+
+1. Click **Instagram** (top right), then **Open Instagram window**. A Chrome window opens.
+2. Log in to the account you post on. You only do this once; it stays logged in.
+3. Press **POST TO INSTAGRAM** under a clip. GhostClip posts it as a Reel with its caption and
+   hashtags in that window, the way you would by hand, and marks the clip **✓ POSTED**.
+
+If Instagram shows something unexpected, GhostClip stops at that step and tells you. Finish the
+post in the window yourself (the caption is already copied, just paste it). Keep it to a few posts
+a day: lots of automatic posts in a row can make Instagram suspicious of the account.
 
 ## Updating
 
@@ -103,5 +118,7 @@ python tests/demo_dashboard.py          # dashboard with a fake stream and fake 
 | `ghostclip/editor.py` | Cuts, reframes, normalizes audio, burns in captions |
 | `ghostclip/captions.py` | faster-whisper word timings → styled ASS captions |
 | `ghostclip/framing.py` | Finds the face cam (bundled YuNet face model, MIT licence) |
+| `ghostclip/games.py` | Game list and hashtags |
+| `ghostclip/instagram.py` | Posts clips through a logged-in Chrome/Edge window (Playwright) |
 | `ghostclip/engine.py` | Runs one stream's session; clips from all streams are edited one at a time |
 | `ghostclip/web.py`, `dashboard.html` | Local dashboard on 127.0.0.1 |

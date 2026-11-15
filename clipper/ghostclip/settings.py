@@ -16,7 +16,7 @@ def app_dir() -> Path:
 
 
 SETTINGS_PATH = app_dir() / "settings.json"
-MAX_STREAMS = 5
+MAX_STREAMS = 10
 DEFAULT_ROOT = Path.home() / "Videos" / "GhostClip"
 
 
@@ -40,6 +40,7 @@ DEFAULT_CLIP_PHRASES = ["clip it", "clip that", "clipped", "clip this", "someone
 class Settings:
     channel: str = ""                  # last single channel (older versions)
     channels: list = field(default_factory=list)   # up to MAX_STREAMS channels shown in the dashboard
+    games: dict = field(default_factory=dict)      # channel -> game key from games.py ("auto" if missing)
     clips_dir: str = str(DEFAULT_ROOT / "Clips")
     recordings_dir: str = str(DEFAULT_ROOT / "Recordings")
     keep_full_recording: bool = False  # False: keep only a rolling buffer, delete it all on Stop
@@ -101,7 +102,11 @@ class Settings:
             cur = getattr(self, f.name)
             val = data[f.name]
             try:
-                if isinstance(cur, bool):
+                if isinstance(cur, dict):
+                    if not isinstance(val, dict):
+                        continue
+                    val = {clean_channel(k): str(v) for k, v in val.items() if clean_channel(k)}
+                elif isinstance(cur, bool):
                     val = val if isinstance(val, bool) else str(val).lower() in ("1", "true", "on", "yes")
                 elif isinstance(cur, int):
                     val = int(float(val))

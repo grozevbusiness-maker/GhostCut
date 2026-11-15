@@ -6,320 +6,429 @@
 <title>GhostClip</title>
 <style>
 :root{
-  --bg:#f4f3f8; --surface:#ffffff; --sunk:#ebe9f2; --ink:#17151f; --muted:#625e70; --line:#dcd9e5;
-  --accent:#6d3df5; --accent-ink:#ffffff; --live:#e5253b; --ok:#13865a; --warn:#b26a00; --hype:#f0a400;
-  --shadow:0 1px 2px rgba(20,10,40,.06),0 4px 16px rgba(20,10,40,.05);
+  --bg:#0b0a11; --surface:#16141f; --surface2:#1d1a29; --sunk:#0f0d16; --line:#2a2638; --line2:#363047;
+  --ink:#f3f1fa; --muted:#9a94ad; --faint:#6d6880;
+  --accent:#8b5cf6; --accent2:#c084fc; --hot:#f472b6; --hype:#fbbf24; --live:#f43f5e; --ok:#34d399; --warn:#f59e0b;
+  --ig1:#f58529; --ig2:#dd2a7b; --ig3:#8134af;
+  --r:16px; --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px -12px rgba(0,0,0,.6);
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#0f0e14; --surface:#18171f; --sunk:#22202b; --ink:#f1eff7; --muted:#a19cb0; --line:#2e2b3a;
-  --accent:#8b63ff; --accent-ink:#ffffff; --live:#ff4d61; --ok:#34c98b; --warn:#ffb340; --hype:#ffc531;
-  --shadow:none;
+@media (prefers-color-scheme:light){:root{
+  --bg:#f4f2fa; --surface:#ffffff; --surface2:#f7f5fc; --sunk:#f0edf8; --line:#e2ddef; --line2:#d3cce6;
+  --ink:#16131f; --muted:#5f5872; --faint:#8b85a0; --shadow:0 1px 2px rgba(30,10,60,.06),0 8px 24px -12px rgba(30,10,60,.18);
 }}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0}
+body{background:radial-gradient(1200px 600px at 10% -10%,color-mix(in srgb,var(--accent) 14%,transparent),transparent 60%),radial-gradient(900px 500px at 100% 0%,color-mix(in srgb,var(--hot) 9%,transparent),transparent 60%),var(--bg);
+  color:var(--ink);font:14px/1.45 "Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;min-height:100vh}
 button,input,select,textarea{font:inherit;color:inherit}
-header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
-.logo{font-weight:800;font-size:18px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
-.logo svg{width:22px;height:22px}
-.pill{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;background:var(--sunk);font-weight:600;font-size:13px}
-.pill i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.pill.live i{background:var(--live);animation:pulse 1.4s infinite}
-.pill.wait i{background:var(--warn)}
-@keyframes pulse{50%{opacity:.35}}
-header .sp{flex:1}
-.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
-.ghost:hover{background:var(--sunk)}
-main{display:grid;grid-template-columns:minmax(320px,400px) 1fr;gap:18px;padding:18px 20px;max-width:1500px;margin:0 auto}
-@media (max-width:900px){main{grid-template-columns:1fr;padding:14px 16px}}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);min-width:0}
-.card h2{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
-.col{display:flex;flex-direction:column;gap:18px;min-width:0}
-label.f{display:block;font-weight:600;margin-bottom:6px}
-.row{display:flex;gap:8px;align-items:center}
-input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:var(--sunk);border:1px solid transparent;border-radius:9px;padding:9px 11px;min-width:0}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
-.big{font-size:17px;padding:11px 13px}
-.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:700;cursor:pointer;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
-.btn:disabled{opacity:.5;cursor:default}
-.btn.stop{background:var(--live)}
-.btn.alt{background:var(--sunk);color:var(--ink)}
-.btn.wide{width:100%;font-size:16px;padding:13px}
-.hint{color:var(--muted);font-size:12.5px;margin-top:6px}
-.folder{display:flex;gap:6px;align-items:center;margin-top:14px;padding:10px 12px;background:var(--sunk);border-radius:10px;font-size:13px}
-.folder code{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Consolas,monospace;font-size:12px}
-.folder button{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:2px 4px}
-.err{color:var(--live);font-weight:600;margin-top:8px;min-height:1em}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
-.stat{background:var(--sunk);border-radius:10px;padding:9px 10px}
-.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.stat span{font-size:12px;color:var(--muted)}
-.meter{height:14px;background:var(--sunk);border-radius:99px;position:relative;overflow:hidden;margin:4px 0 6px}
-.meter div{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s,background .3s}
-.meter.hot div{background:var(--hype)}
-.meter-label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
-canvas{width:100%;height:110px;display:block;margin-top:10px}
-.sub{font-size:12.5px;color:var(--muted);margin-top:8px}
-.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
-.clip{background:var(--sunk);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+button{cursor:pointer}
+[hidden]{display:none!important}
+
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:12px 24px;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.02em}
+.logo .mark{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--hot));color:#fff;box-shadow:0 6px 18px -6px var(--accent)}
+.logo .mark svg{width:18px;height:18px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.dot.live{background:var(--live);animation:ping 1.6s infinite}
+.dot.wait{background:var(--warn)} .dot.ok{background:var(--ok)}
+@keyframes ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--live) 70%,transparent)}100%{box-shadow:0 0 0 8px transparent}}
+.sp{flex:1}
+.hbtn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:11px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.hbtn:hover{border-color:var(--line2);background:var(--surface2)}
+.igmark{width:18px;height:18px;border-radius:6px;background:linear-gradient(45deg,var(--ig1),var(--ig2),var(--ig3));display:grid;place-items:center;flex:none}
+.igmark svg{width:12px;height:12px}
+
+main{max-width:1880px;margin:0 auto;padding:20px 24px 60px}
+@media (max-width:700px){main{padding:14px 16px 40px} header{padding:10px 16px;flex-wrap:wrap}}
+.banner{margin-bottom:16px;padding:12px 16px;border-radius:12px;background:color-mix(in srgb,var(--warn) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);font-weight:600}
+
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:12px;margin-bottom:6px;align-items:stretch}
+@media (max-width:1000px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.summary .actions{grid-column:1/-1}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.kpi span{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.kpi b{display:block;font-size:26px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actions{display:flex;gap:10px;align-items:center}
+.actions .btn{flex:1}
+.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:700;background:var(--accent);color:#fff;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+.btn.grad{background:linear-gradient(135deg,var(--accent),var(--hot));box-shadow:0 8px 22px -10px var(--hot)}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.stop{background:color-mix(in srgb,var(--live) 85%,#000)}
+.btn.sm{padding:7px 12px;border-radius:10px;font-size:13px}
+.err{color:var(--live);font-weight:600;min-height:1.2em;margin:4px 2px}
+
+h2.sec{display:flex;align-items:baseline;gap:10px;font-size:15px;margin:22px 2px 12px;letter-spacing:-.01em;flex-wrap:wrap}
+h2.sec small{color:var(--muted);font-weight:500;font-size:13px}
+h2.sec code{color:var(--ink);font-family:ui-monospace,Consolas,monospace;font-size:12px;word-break:break-all}
+h2.sec small{min-width:0}
+.link{background:none;border:0;color:var(--accent2);font-weight:700;padding:0;font-size:13px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.card{background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-width:0}
+.scard{padding:14px;display:flex;flex-direction:column;gap:10px;transition:border-color .3s,box-shadow .3s}
+.scard.moment{border-color:color-mix(in srgb,var(--hype) 70%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--hype) 40%,transparent),0 12px 40px -14px var(--hype)}
+.scard .top{display:flex;align-items:center;gap:8px}
+.scard .name{flex:1;min-width:0;font-weight:800;font-size:16px;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scard .name a{color:inherit;text-decoration:none}
+.scard .name a:hover{text-decoration:underline}
+.scard .x{background:none;border:0;color:var(--faint);font-size:20px;line-height:1;padding:2px 5px;border-radius:6px}
+.scard .x:hover{color:var(--ink);background:var(--sunk)}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:14px}
+.icon-btn:disabled{opacity:.4;cursor:default}
+.scard select{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:13px}
+.playing{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:1.2em;margin-top:-4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stats div{background:var(--sunk);border-radius:10px;padding:7px 9px}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stats span{font-size:11.5px;color:var(--muted)}
+.chartwrap{position:relative;background:var(--sunk);border-radius:12px;overflow:hidden}
+.chartwrap canvas{display:block;width:100%;height:78px}
+.chartwrap .lbl{position:absolute;left:9px;top:6px;font-size:11px;color:var(--faint);font-weight:600}
+.feed{background:var(--sunk);border-radius:12px;padding:8px 10px;height:150px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;font-size:12.5px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 28%);mask-image:linear-gradient(to bottom,transparent,#000 28%)}
+.feed div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);flex:none}
+.feed b{color:var(--accent2);font-weight:600}
+.feed .h{color:var(--ink)} .feed .h b{color:var(--hype)}
+.feed .empty{color:var(--faint);text-align:center;white-space:normal;margin:auto 0}
+.status{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status.hot{color:var(--hype);font-weight:700}
+.addcard{display:flex;flex-direction:column;justify-content:center;gap:10px;padding:18px;border-style:dashed;background:transparent;min-height:200px}
+.addcard input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-weight:600}
+.addcard input:focus,.scard select:focus,.set input:focus,.set select:focus,.set textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.addcard p{margin:0;color:var(--muted);font-size:12.5px}
+
+.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.clip{overflow:hidden;display:flex;flex-direction:column}
 .clip video{width:100%;aspect-ratio:9/16;background:#000;display:block;object-fit:contain}
 .clip.wide video{aspect-ratio:16/9}
-.clip .meta{padding:10px 11px;display:flex;flex-direction:column;gap:6px}
-.clip .t{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clip .body{padding:11px;display:flex;flex-direction:column;gap:8px}
+.clip .t{font-weight:700;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clip .t small{color:var(--muted);font-weight:500}
 .badges{display:flex;gap:5px;flex-wrap:wrap}
-.badge{font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--surface);color:var(--muted)}
-.badge.k-laugh{color:var(--hype)} .badge.k-clip{color:var(--accent)} .badge.k-hype{color:var(--live)}
-.clip .acts{display:flex;gap:6px}
-.clip .acts button{flex:1;font-size:12px;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600}
-.empty{color:var(--muted);text-align:center;padding:40px 10px;border:1.5px dashed var(--line);border-radius:12px}
-.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
-details.card>summary{cursor:pointer;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;list-style:none}
-details.card>summary::before{content:"▸ ";}
-details.card[open]>summary::before{content:"▾ ";}
-details.card[open]>summary{margin-bottom:12px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
-.grid2 .full{grid-column:1/-1}
+.badge{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.badge.k-laugh{color:var(--hype)} .badge.k-clip{color:var(--accent2)} .badge.k-hype{color:var(--hot)} .badge.warn{color:var(--warn)}
+.row2{display:flex;gap:6px}
+.row2 button{flex:1;font-size:12.5px;padding:7px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.row2 button:hover{background:var(--surface2)}
+.igpost{width:100%;border:0;border-radius:11px;padding:10px;font-weight:800;letter-spacing:.03em;color:#fff;background:linear-gradient(45deg,var(--ig1),var(--ig2) 55%,var(--ig3));box-shadow:0 8px 20px -10px var(--ig2)}
+.igpost:hover{filter:brightness(1.08)}
+.igpost:disabled{opacity:.6;cursor:default}
+.igpost.done{background:var(--sunk);color:var(--ok);box-shadow:none;border:1px solid var(--line)}
+.igstate{font-size:12px;color:var(--muted)}
+.igstate:empty{display:none}
+.empty-clips{grid-column:1/-1;text-align:center;padding:46px 12px;border:1.5px dashed var(--line2);border-radius:var(--r);color:var(--muted)}
+.empty-clips b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+
+.bottom{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-top:26px;align-items:start}
+@media (max-width:1100px){.bottom{grid-template-columns:1fr}}
+details.card{padding:16px}
+details.card>summary{cursor:pointer;font-weight:700;list-style:none;display:flex;align-items:center;gap:10px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .2s}
+details.card[open]>summary::before{transform:rotate(45deg)}
+details.card[open]>summary{margin-bottom:14px}
+.set{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.set .full{grid-column:1/-1}
 .set label{font-weight:600;font-size:13px;display:block;margin-bottom:4px}
-.set .hint{margin-top:3px}
-.toggle{display:flex;gap:8px;align-items:flex-start;font-weight:600;font-size:13px;cursor:pointer}
+.set input[type=text],.set input[type=number],.set input[type=password],.set select,.set textarea{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-width:0}
+.hint{color:var(--muted);font-size:12px;margin-top:4px}
+.toggle{display:flex;gap:9px;align-items:flex-start;font-weight:600;font-size:13px;cursor:pointer}
 .toggle input{margin-top:3px;accent-color:var(--accent)}
 input[type=range]{width:100%;accent-color:var(--accent)}
-pre.log{margin:0;max-height:260px;overflow:auto;font:12px/1.5 ui-monospace,Consolas,monospace;color:var(--muted);white-space:pre-wrap;word-break:break-word}
-.banner{margin:14px 20px 0;padding:11px 14px;border-radius:10px;background:color-mix(in srgb,var(--warn) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);font-weight:600}
-.streams{display:flex;flex-direction:column;gap:10px}
-.srow{background:var(--sunk);border-radius:12px;padding:10px 11px}
-.srow .top{display:flex;gap:6px;align-items:center}
-.srow input{background:var(--surface);font-weight:600}
-.srow .go{padding:9px 13px}
-.srow .cut{padding:9px 10px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
-.srow .info{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-top:7px}
-.srow .info b{color:var(--ink);font-weight:600}
-.srow .st{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.srow .meter{height:7px;margin:7px 0 0}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-.dot.live{background:var(--live);animation:pulse 1.4s infinite}.dot.wait{background:var(--warn)}
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none}
-.toast.on{opacity:1}
+pre.log{margin:0;max-height:360px;overflow:auto;font:12px/1.55 ui-monospace,"Cascadia Code",Consolas,monospace;color:var(--muted);white-space:pre-wrap;word-break:break-word}
+
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(5,4,10,.6);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px}
+.panel{width:min(520px,100%);background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+.panel h3{margin:0 0 6px;display:flex;align-items:center;gap:10px;font-size:18px}
+.panel p{color:var(--muted);margin:8px 0}
+.panel ol{color:var(--muted);padding-left:20px;margin:10px 0 14px}
+.panel ol b{color:var(--ink)}
+.panel .st{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--sunk);border-radius:12px;font-weight:600;margin:12px 0}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:calc(100% - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%)}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>GhostClip</div>
-  <span class="pill" id="pill"><i></i><span id="pillText">Ready</span></span>
+  <div class="logo"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></span>GhostClip</div>
+  <span class="pill"><span class="dot" id="hdot"></span><span id="htext">Ready</span></span>
   <span class="sp"></span>
-  <button class="ghost" id="quit" title="Stop everything and close the app">Quit app</button>
+  <button class="hbtn" id="igBtn"><span class="igmark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/></svg></span><span id="igBtnText">Instagram</span></button>
+  <button class="hbtn" id="quit">Quit</button>
 </header>
-<div class="banner" id="banner" hidden></div>
 
 <main>
-  <div class="col">
-    <section class="card">
-      <h2>Streams <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:500">up to 5 at once</span></h2>
-      <div class="streams" id="streams"></div>
-      <div class="row" style="margin-top:12px">
-        <button class="btn" style="flex:1" id="startAll">Start all</button>
-        <button class="btn alt" style="flex:1" id="stopAll">Stop all</button>
-      </div>
-      <div class="hint">Type channel names, then Start. You can start before a stream goes live: GhostClip waits for it.</div>
-      <div class="err" id="err"></div>
-      <div class="folder"><span>Clips:</span><code id="clipsDir"></code><button data-pick="clips_dir">Change</button><button data-open="clips">Open</button></div>
-    </section>
+  <div class="banner" id="banner" hidden></div>
 
-    <details class="card set" id="settings">
+  <section class="summary">
+    <div class="kpi"><span>Live now</span><b id="kLive">0</b></div>
+    <div class="kpi"><span>Chat messages / min</span><b id="kRate">0</b></div>
+    <div class="kpi"><span>Clips this session</span><b id="kClips">0</b></div>
+    <div class="kpi"><span>Clips being made</span><b id="kPend">0</b></div>
+    <div class="actions"><button class="btn grad" id="startAll">▶ Start all</button><button class="btn ghost" id="stopAll">■ Stop all</button></div>
+  </section>
+  <div class="err" id="err"></div>
+
+  <h2 class="sec">Streams <small id="slots"></small></h2>
+  <div class="grid" id="streams"></div>
+
+  <h2 class="sec">Clips <small id="clipsWhere"></small></h2>
+  <div class="clips" id="clips"></div>
+
+  <div class="bottom">
+    <details class="card" id="settings">
       <summary>Settings</summary>
-      <div class="grid2" id="setForm"></div>
-      <div class="row" style="margin-top:14px"><button class="btn" id="saveSet">Save settings</button><span class="hint" id="saveMsg"></span></div>
+      <div class="set" id="setForm"></div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:14px"><button class="btn" id="saveSet">Save settings</button><span class="hint" id="saveMsg"></span></div>
     </details>
-  </div>
-
-  <div class="col">
-    <section class="card">
-      <h2 style="display:flex;justify-content:space-between;align-items:center">Clips <span id="pending" class="hint" style="margin:0;text-transform:none;letter-spacing:0"></span></h2>
-      <div class="clips" id="clips"></div>
-    </section>
     <details class="card" open>
       <summary>Activity</summary>
       <pre class="log" id="log"></pre>
     </details>
   </div>
 </main>
+
+<div class="overlay" id="igPanel" hidden>
+  <div class="panel">
+    <h3><span class="igmark" style="width:28px;height:28px;border-radius:9px"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" style="width:16px;height:16px"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/></svg></span>Instagram</h3>
+    <div class="st"><span class="dot" id="igDot"></span><span id="igStatus">Not connected</span></div>
+    <ol>
+      <li>Click <b>Open Instagram window</b>. A Chrome window opens.</li>
+      <li>Log in to the account you post clips on. You only do this once.</li>
+      <li>Leave that window open (you can minimize it), then press <b>POST TO INSTAGRAM</b> under any clip.</li>
+    </ol>
+    <p>GhostClip posts the clip as a Reel with its caption and hashtags in that window, the way you would by hand. If Instagram shows something unexpected, it stops there so you can finish in the window. The caption is already copied.</p>
+    <p style="font-size:12.5px">A few posts a day is fine. Posting dozens in a row can make Instagram suspicious of the account.</p>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn grad" id="igOpen" style="flex:1">Open Instagram window</button><button class="btn ghost" id="igClose">Close</button></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
-const $ = s => document.querySelector(s);
-const FIELDS = [
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clean=v=>{v=(v||"").trim();const m=v.match(/twitch\.tv\/([A-Za-z0-9_]+)/);if(m)v=m[1];return v.replace(/^[#@]+/,"").trim().toLowerCase()};
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2600)}
+async function post(url,body={}){const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});return r.json()}
+async function act(url,body){$("#err").textContent="";const r=await post(url,body);if(!r.ok&&r.error)$("#err").textContent=r.error;return r}
+const fmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+"k":String(n);
+
+let ST=null,S=null,formFilled=false,cardKey=null,clipKey=null;
+
+/* ---------- settings ---------- */
+const FIELDS=[
   ["clips_dir","Clips folder","folder","","Finished clips are saved here."],
-  ["recordings_dir","Recordings folder","folder","","The stream recording goes here."],
-  ["keep_full_recording","Also save the whole stream when I press Stop","bool","","Off (default): only the clips are kept. The recording is deleted when you press Stop."],
-  ["buffer_minutes","Minutes to keep when not saving the whole stream","number"],
-  ["layout","Clip format","select",[["stack","Phone: face cam on top, gameplay below (recommended)"],["vertical_crop","Phone: zoomed to the center only"],["vertical_blur","Phone: whole picture on a blurred background"],["original","Original 16:9"]]],
-  ["facecam","Where is the face cam?","select",[["auto","Find it automatically"],["top-left","Top left"],["top-right","Top right"],["bottom-left","Bottom left"],["bottom-right","Bottom right"],["none","No face cam"]],"Only change this if auto picks the wrong spot for a streamer."],
-  ["captions","Add captions","bool","","Auto-captions of what the streamer says, word by word."],
+  ["layout","Clip format","select",[["stack","Phone: face cam on top, gameplay below"],["vertical_crop","Phone: zoomed to the center only"],["vertical_blur","Phone: whole picture on a blurred background"],["original","Original 16:9"]]],
+  ["facecam","Where is the face cam?","select",[["auto","Find it automatically"],["top-left","Top left"],["top-right","Top right"],["bottom-left","Bottom left"],["bottom-right","Bottom right"],["none","No face cam"]],"Only change if auto picks the wrong spot."],
+  ["captions","Add captions","bool","","Word-by-word captions of what the streamer says."],
   ["whisper_model","Caption accuracy","select",[["tiny","Fastest"],["base","Fast"],["small","Good (recommended)"],["medium","Best (slow without a GPU)"]]],
   ["language","Stream language","select",[["","Detect automatically"],["en","English"],["es","Spanish"],["pt","Portuguese"],["fr","French"],["de","German"],["it","Italian"],["ru","Russian"],["bg","Bulgarian"],["pl","Polish"],["tr","Turkish"],["ja","Japanese"],["ko","Korean"]]],
   ["credit","Show twitch.tv/channel on the clip","bool"],
   ["sensitivity","How easily to clip","range","","Left: only huge moments. Right: more clips."],
-  ["pre_roll","Seconds before chat reacts","number","","Chat reacts after the moment, so most of the clip comes before."],
+  ["pre_roll","Seconds before chat reacts","number"],
   ["post_roll","Seconds after","number"],
   ["min_clip","Shortest clip (s)","number"],
   ["max_clip","Longest clip (s)","number"],
   ["cooldown","Seconds between clips","number"],
-  ["sync_offset","Timing nudge (s)","number","","If clips start too early, use a positive number; too late, negative."],
+  ["sync_offset","Timing nudge (s)","number","","Clips start too early: positive. Too late: negative."],
+  ["quality","Recording quality","text","","With many streams, 720p60 uses less internet than 1080p60."],
+  ["keep_full_recording","Also save the whole stream when I press Stop","bool"],
   ["laugh_words","Laughing words and emotes","list","","Comma separated."],
   ["hype_words","Hype words and emotes","list"],
   ["clip_phrases","Clip requests (count extra)","list"],
-  ["quality","Recording quality","text","","Tried in order, e.g. 1080p60,720p60,best"],
   ["encoder","Video encoder","select",[["auto","Automatic (NVIDIA GPU if available)"],["x264","CPU only"]]],
-  ["twitch_oauth","Twitch token (optional, removes ads if you have Turbo or a sub)","password"],
+  ["twitch_oauth","Twitch token (removes ads with Turbo or a sub)","password"],
+  ["recordings_dir","Recordings folder (temporary)","folder"],
   ["ffmpeg_path","ffmpeg location (leave empty to find it)","text"],
 ];
-const WIDE = new Set(["facecam","clips_dir","recordings_dir","keep_full_recording","layout","captions","sensitivity","laugh_words","hype_words","clip_phrases","quality","twitch_oauth","ffmpeg_path","credit"]);
-let S = null, formFilled = false, clipKey = "", lastState = null, windows = false;
-
-function esc(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2200)}
-async function post(url,body={}){const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});return r.json()}
-
+const WIDE=new Set(["clips_dir","layout","facecam","captions","credit","sensitivity","quality","keep_full_recording","laugh_words","hype_words","clip_phrases","twitch_oauth","recordings_dir","ffmpeg_path"]);
 function buildForm(){
-  const f=$("#setForm"); f.innerHTML="";
+  const f=$("#setForm");f.innerHTML="";
   for(const [k,label,type,opts,hint] of FIELDS){
-    const d=document.createElement("div"); if(WIDE.has(k)) d.className="full";
-    let h="";
+    const d=document.createElement("div");if(WIDE.has(k))d.className="full";let h="";
     if(type==="bool") h=`<label class="toggle"><input type="checkbox" data-k="${k}"><span>${esc(label)}</span></label>`;
-    else {
+    else{
       h=`<label for="s_${k}">${esc(label)}</label>`;
       if(type==="select") h+=`<select id="s_${k}" data-k="${k}">${opts.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join("")}</select>`;
       else if(type==="range") h+=`<input id="s_${k}" type="range" min="0.4" max="2.2" step="0.1" data-k="${k}">`;
       else if(type==="list") h+=`<textarea id="s_${k}" rows="2" data-k="${k}"></textarea>`;
-      else if(type==="folder") h+=`<div class="row"><input id="s_${k}" type="text" data-k="${k}" spellcheck="false"><button class="btn alt" data-pick="${k}" type="button">Browse</button></div>`;
+      else if(type==="folder") h+=`<div style="display:flex;gap:8px"><input id="s_${k}" type="text" data-k="${k}" spellcheck="false"><button class="btn ghost sm" data-pick="${k}" type="button">Browse</button></div>`;
       else h+=`<input id="s_${k}" type="${type==="number"?"number":type==="password"?"password":"text"}" ${type==="number"?'step="any"':""} data-k="${k}" spellcheck="false">`;
     }
     if(hint) h+=`<div class="hint">${esc(hint)}</div>`;
-    d.innerHTML=h; f.appendChild(d);
+    d.innerHTML=h;f.appendChild(d);
   }
 }
-function fillForm(s){
-  document.querySelectorAll("#setForm [data-k]").forEach(el=>{
-    const v=s[el.dataset.k];
-    if(el.type==="checkbox") el.checked=!!v;
-    else if(Array.isArray(v)) el.value=v.join(", ");
-    else el.value=v??"";
-  });
-}
-function readForm(){
-  const o={};
-  document.querySelectorAll("#setForm [data-k]").forEach(el=>{
-    o[el.dataset.k]= el.type==="checkbox"?el.checked:el.value;
-  });
-  return o;
-}
+function fillForm(s){document.querySelectorAll("#setForm [data-k]").forEach(el=>{const v=s[el.dataset.k];if(el.type==="checkbox")el.checked=!!v;else if(Array.isArray(v))el.value=v.join(", ");else el.value=v??""})}
+function readForm(){const o={};document.querySelectorAll("#setForm [data-k]").forEach(el=>o[el.dataset.k]=el.type==="checkbox"?el.checked:el.value);return o}
 
-function fmtTime(sec){sec=sec|0;const h=sec/3600|0,m=(sec%3600)/60|0,s=sec%60;return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`}
-
-function clean(v){v=(v||"").trim();const m=v.match(/twitch\.tv\/([A-Za-z0-9_]+)/);if(m)v=m[1];return v.replace(/^[#@]+/,"").trim().toLowerCase()}
-let rowsBuilt=false;
-function buildRows(n,streams){
-  const box=$("#streams");box.innerHTML="";
-  for(let i=0;i<n;i++){
-    const d=document.createElement("div");d.className="srow";d.dataset.i=i;
-    d.innerHTML=`<div class="top"><span class="dot"></span><input type="text" placeholder="channel ${i+1}" spellcheck="false" autocomplete="off">
-      <button class="btn go">Start</button><button class="btn cut" title="Clip the last ~40 seconds now" disabled>✂</button></div>
-      <div class="meter"><div></div></div>
-      <div class="info"><span class="st">Not started</span><span><b class="rate">0</b> msgs/min · <b class="nclips">0</b> clips</span></div>`;
-    d.querySelector("input").value=streams[i]?.channel||"";
-    box.appendChild(d);
+/* ---------- stream cards ---------- */
+const channelList=()=>ST?ST.streams.map(s=>s.channel):[];
+function buildCards(st){
+  const box=$("#streams"),keepAdd=$("#addInput")?.value||"";box.innerHTML="";
+  for(const s of st.streams){
+    const c=document.createElement("div");c.className="card scard";c.dataset.ch=s.channel;
+    c.innerHTML=`<div class="top"><span class="dot"></span>
+        <div class="name"><a href="https://www.twitch.tv/${esc(s.channel)}" target="_blank" rel="noopener">${esc(s.channel)}</a></div>
+        <button class="btn sm go">Start</button><button class="icon-btn cut" title="Clip the last 40 seconds now">✂</button><button class="x" title="Remove this stream">×</button></div>
+      <select class="game" title="Game, for the hashtags">${st.games.map(([k,n])=>`<option value="${esc(k)}">${esc(n)}</option>`).join("")}</select>
+      <div class="playing"></div>
+      <div class="stats"><div><b class="rate">0</b><span>msgs / min</span></div><div><b class="hype">0%</b><span>hype</span></div><div><b class="nclips">0</b><span>clips</span></div></div>
+      <div class="chartwrap"><span class="lbl">Hype · last 2 min</span><canvas width="600" height="156"></canvas></div>
+      <div class="feed"><div class="empty">Chat shows up here once it's running</div></div>
+      <div class="status">Not started</div>`;
+    c.querySelector(".game").value=s.game||"auto";
+    box.appendChild(c);
   }
-  rowsBuilt=true;
+  if(st.streams.length<st.max_streams){
+    const a=document.createElement("div");a.className="card addcard";
+    a.innerHTML=`<b style="font-size:15px">Add a stream</b><input id="addInput" placeholder="channel name or twitch.tv link" spellcheck="false" autocomplete="off">
+      <div style="display:flex;gap:8px"><button class="btn sm ghost" id="addBtn" style="flex:1">Add</button><button class="btn sm grad" id="addStart" style="flex:1">Add & start</button></div>
+      <p>You can add a streamer before they go live. GhostClip waits for them.</p>`;
+    box.appendChild(a);$("#addInput").value=keepAdd;
+  }
 }
-function channelsFromRows(){return [...document.querySelectorAll(".srow input")].map(i=>clean(i.value)).filter(Boolean)}
-function renderStreams(st){
-  if(!rowsBuilt) buildRows(st.max_streams,st.streams);
-  const by={};st.streams.forEach(s=>by[s.channel]=s);
-  let live=0,waiting=0;
-  document.querySelectorAll(".srow").forEach(row=>{
-    const inp=row.querySelector("input"),name=clean(inp.value),s=by[name];
-    const state=s?.state||"stopped",running=state==="running",stopping=state==="stopping";
-    const rec=running&&/Recording/.test(s.status);
-    if(rec) live++; else if(running) waiting++;
-    row.querySelector(".dot").className="dot"+(rec?" live":running||stopping?" wait":"");
-    const go=row.querySelector(".go");
-    go.textContent=stopping?"…":running?"Stop":"Start";go.className="btn go"+(running?" stop":"");go.disabled=stopping||(!name&&!running);
-    row.querySelector(".cut").disabled=!running;
-    inp.disabled=running||stopping;
-    let status=s?(running&&s.in_moment?"🔥 Hype moment! Clipping…":s.status):(name?"Not started":"Empty");
-    if(s?.pending && !s.in_moment) status=`Making ${s.pending} clip${s.pending>1?"s":""}… `+status;
-    row.querySelector(".st").textContent=status;row.querySelector(".st").title=(s?.status||"")+(s?.chat?" · "+s.chat:"");
-    row.querySelector(".rate").textContent=s?.rate??0;row.querySelector(".nclips").textContent=s?.clips??0;
-    const pct=s?.threshold?Math.min(100,s.score/s.threshold*100):0;
-    row.querySelector(".meter").classList.toggle("hot",pct>=100);row.querySelector(".meter div").style.width=(running?pct:0)+"%";
-  });
-  const pill=$("#pill");pill.className="pill"+(live?" live":waiting?" wait":"");
-  $("#pillText").textContent=live?`Recording ${live} stream${live>1?"s":""}`+(waiting?`, ${waiting} waiting`:""):waiting?`Waiting for ${waiting} stream${waiting>1?"s":""} to go live`:"Ready";
+function drawChart(cv,hist){
+  const g=cv.getContext("2d"),W=cv.width,H=cv.height,cs=getComputedStyle(document.documentElement);
+  g.clearRect(0,0,W,H);if(!hist||hist.length<2)return;
+  const acc=cs.getPropertyValue("--accent").trim(),hot=cs.getPropertyValue("--hype").trim(),mut=cs.getPropertyValue("--faint").trim();
+  const max=Math.max(...hist.map(h=>Math.max(h[1],h[2]*1.15)),1);
+  const x=t=>W+(t/120)*W,y=v=>H-8-(v/max)*(H-36);
+  const grad=g.createLinearGradient(0,0,0,H);grad.addColorStop(0,acc+"80");grad.addColorStop(1,acc+"00");
+  g.beginPath();hist.forEach((h,i)=>i?g.lineTo(x(h[0]),y(h[1])):g.moveTo(x(h[0]),y(h[1])));
+  g.lineTo(x(hist[hist.length-1][0]),H);g.lineTo(x(hist[0][0]),H);g.closePath();g.fillStyle=grad;g.fill();
+  g.setLineDash([7,6]);g.strokeStyle=mut;g.lineWidth=2;g.beginPath();
+  hist.forEach((h,i)=>i?g.lineTo(x(h[0]),y(h[2])):g.moveTo(x(h[0]),y(h[2])));g.stroke();g.setLineDash([]);
+  g.lineWidth=3.5;g.lineJoin="round";g.lineCap="round";
+  for(let i=1;i<hist.length;i++){const a=hist[i-1],b=hist[i];g.strokeStyle=b[1]>=b[2]?hot:acc;g.beginPath();g.moveTo(x(a[0]),y(a[1]));g.lineTo(x(b[0]),y(b[1]));g.stroke()}
+}
+function renderCards(st){
+  const key=st.streams.map(s=>s.channel).join("|");
+  if(key!==cardKey){buildCards(st);cardKey=key}
+  let live=0,rate=0,clips=0,pend=0,waiting=0;
+  for(const s of st.streams){
+    const c=document.querySelector(`.scard[data-ch="${CSS.escape(s.channel)}"]`);if(!c)continue;
+    const running=s.state==="running",stopping=s.state==="stopping",rec=running&&/Recording/.test(s.status);
+    if(rec)live++;else if(running)waiting++;
+    rate+=s.rate||0;clips+=s.clips||0;pend+=s.pending||0;
+    c.querySelector(".dot").className="dot"+(rec?" live":running||stopping?" wait":"");
+    const go=c.querySelector(".go");go.textContent=stopping?"Stopping…":running?"Stop":"Start";go.className="btn sm go"+(running?" stop":"");go.disabled=stopping;
+    c.querySelector(".cut").disabled=!running;c.querySelector(".x").hidden=running||stopping;
+    const sel=c.querySelector(".game");if(document.activeElement!==sel&&sel.value!==s.game)sel.value=s.game||"auto";
+    c.querySelector(".playing").textContent=s.category?`Playing ${s.category}${s.title?" · "+s.title:""}`:(s.game_name?`Hashtags: ${s.game_name}`:"");
+    c.querySelector(".rate").textContent=fmt(s.rate||0);
+    const pct=s.threshold?Math.round(Math.min(999,s.score/s.threshold*100)):0;
+    c.querySelector(".hype").textContent=(running?pct:0)+"%";c.querySelector(".nclips").textContent=s.clips||0;
+    c.classList.toggle("moment",!!s.in_moment);
+    drawChart(c.querySelector("canvas"),running?s.history:null);
+    const feed=c.querySelector(".feed");
+    if(running&&s.feed&&s.feed.length) feed.innerHTML=s.feed.map(([u,t,h])=>`<div class="${h?"h":""}"><b>${esc(u)}</b> ${esc(t)}</div>`).join("");
+    else feed.innerHTML=`<div class="empty">${running?esc(s.chat||"Connecting to chat…"):"Chat shows up here once it's running"}</div>`;
+    let txt=s.in_moment?"🔥 Hype moment! Clipping…":s.status;if(s.pending&&!s.in_moment)txt=`Making ${s.pending} clip${s.pending>1?"s":""} · `+txt;
+    const stEl=c.querySelector(".status");stEl.textContent=txt;stEl.title=txt;stEl.classList.toggle("hot",!!s.in_moment);
+  }
+  $("#kLive").textContent=live+(waiting?` · ${waiting} waiting`:"");$("#kRate").textContent=fmt(rate);$("#kClips").textContent=clips;$("#kPend").textContent=pend;
+  $("#hdot").className="dot"+(live?" live":waiting?" wait":"");
+  $("#htext").textContent=live?`Recording ${live} stream${live>1?"s":""}`:waiting?`Waiting for ${waiting} to go live`:"Ready";
+  $("#slots").textContent=`${st.streams.length} of ${st.max_streams}`;
 }
 
-function renderClips(clips){
+/* ---------- clips ---------- */
+function renderClips(st){
+  const clips=st.clips||[],posts=(st.instagram||{}).posts||{},box=$("#clips");
   const key=clips.map(c=>c.file).join("|");
-  if(key===clipKey) return; clipKey=key;
-  const box=$("#clips");
-  if(!clips.length){box.innerHTML=`<div class="empty" style="grid-column:1/-1"><b>No clips yet</b>When chat goes wild (laughing, "LMAO", "KEKW", "CLIP IT"), the clip appears here and in your folder.</div>`;return}
-  box.innerHTML=clips.map((c,i)=>{
-    const t=c.time?new Date(c.time).toLocaleString([], {month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"}):c.file;
-    const kind={laugh:"😂 funny",hype:"🔥 hype",clip:"🎬 clip it",manual:"✂ manual"}[c.kind]||"clip";
-    const wide=c.file && lastState?.settings?.layout==="original" ? " wide":"";
-    return `<div class="clip${wide}">
-      <video src="${esc(c.url)}#t=0.5" preload="metadata" controls playsinline></video>
-      <div class="meta"><div class="t" title="${esc(c.file)}">${esc(c.channel||"")} · ${esc(t)}</div>
-      <div class="badges"><span class="badge k-${esc(c.kind)}">${kind}</span>${c.hype?`<span class="badge">${c.hype}x chat</span>`:""}${c.length?`<span class="badge">${Math.round(c.length)}s</span>`:""}</div>
-      <div class="acts"><button data-copy="${i}">Copy caption</button><button data-file="${esc(c.file)}">${windows?"Open":"Open"}</button></div></div></div>`}).join("");
-  box._clips=clips;
+  if(key!==clipKey){
+    clipKey=key;
+    box.innerHTML=!clips.length?`<div class="empty-clips"><b>No clips yet</b>When chat goes wild (laughing, "LMAO", "KEKW", "CLIP IT") the clip shows up here, edited and captioned.</div>`:
+    clips.map((c,i)=>{
+      const t=c.time?new Date(c.time).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+      const kind={laugh:"😂 funny",hype:"🔥 hype",clip:"🎬 clip it",manual:"✂ manual"}[c.kind]||"clip";
+      const capWarn=c.captions&&/^failed/.test(c.captions)?`<span class="badge warn" title="${esc(c.captions)}">no captions</span>`:"";
+      return `<div class="card clip${st.settings.layout==="original"?" wide":""}" data-i="${i}">
+        <video src="${esc(c.url)}#t=0.5" preload="metadata" controls playsinline></video>
+        <div class="body"><div class="t">${esc(c.channel||"")} <small>· ${esc(t)}</small></div>
+        <div class="badges"><span class="badge k-${esc(c.kind)}">${kind}</span>${c.game?`<span class="badge">${esc(c.game)}</span>`:""}${c.length?`<span class="badge">${Math.round(c.length)}s</span>`:""}${capWarn}</div>
+        <button class="igpost" data-ig="${i}">POST TO INSTAGRAM</button><div class="igstate"></div>
+        <div class="row2"><button data-copy="${i}">Copy caption</button><button data-file="${esc(c.file)}">Open file</button></div></div></div>`}).join("");
+    box._clips=clips;
+  }
+  box.querySelectorAll(".clip").forEach(el=>{
+    const c=clips[+el.dataset.i];if(!c)return;
+    const b=el.querySelector(".igpost"),s=el.querySelector(".igstate"),state=posts[c.file];
+    const busy=state&&!/Posted|Stopped|Couldn't|Log in/.test(state),done=c.instagram||(state&&/Posted/.test(state));
+    b.textContent=done?"✓ POSTED":busy?"POSTING…":"POST TO INSTAGRAM";b.classList.toggle("done",!!done);b.disabled=!!busy;
+    s.textContent=state&&!/Posted/.test(state)?state:"";
+  });
+}
+
+function renderIG(ig){
+  if(!ig)return;const on=ig.window&&ig.logged_in;
+  $("#igBtnText").textContent=on?"Instagram ✓":"Instagram";
+  $("#igDot").className="dot"+(on?" ok":ig.window?" wait":"");
+  $("#igStatus").textContent=!ig.available?"Instagram posting isn't installed yet. Close GhostClip and run update.bat.":(ig.status||"Not connected");
 }
 
 function render(st){
-  lastState=st; windows=st.windows; S=st.settings;
+  ST=st;S=st.settings;
   if(!formFilled){buildForm();fillForm(S);formFilled=true}
-  renderStreams(st);
-  $("#clipsDir").textContent=S.clips_dir; $("#clipsDir").title=S.clips_dir;
-  const pend=st.streams.reduce((n,s)=>n+(s.pending||0),0);
-  $("#pending").textContent=pend?`${pend} clip${pend>1?"s":""} being made…`:"";
-  renderClips(st.clips||[]);
-  const lg=$("#log"), atBottom=lg.scrollHeight-lg.scrollTop-lg.clientHeight<30;
-  lg.textContent=(st.log||[]).join("\n"); if(atBottom) lg.scrollTop=lg.scrollHeight;
-  const miss=[]; if(!st.checks.ffmpeg) miss.push("ffmpeg"); if(!st.checks.streamlink) miss.push("streamlink"); if(!st.checks.whisper) miss.push("captions (faster-whisper)"); if(!st.checks.facecam) miss.push("face cam finder (opencv)");
-  $("#banner").hidden=!miss.length; if(miss.length) $("#banner").textContent=`Missing: ${miss.join(", ")}. Close GhostClip and run setup_windows.bat (or update.bat) again.`;
+  renderCards(st);renderClips(st);renderIG(st.instagram);
+  $("#clipsWhere").innerHTML=`in <code>${esc(S.clips_dir)}</code> · <button class="link" data-open="clips">Open folder</button> · <button class="link" data-pick="clips_dir">Change</button>`;
+  const lg=$("#log"),atBottom=lg.scrollHeight-lg.scrollTop-lg.clientHeight<30;lg.textContent=(st.log||[]).join("\n");if(atBottom)lg.scrollTop=lg.scrollHeight;
+  const miss=[];if(!st.checks.ffmpeg)miss.push("ffmpeg");if(!st.checks.streamlink)miss.push("streamlink");if(!st.checks.whisper)miss.push("captions");if(!st.checks.facecam)miss.push("face cam finder");if(!st.instagram?.available)miss.push("Instagram posting");
+  $("#banner").hidden=!miss.length;if(miss.length)$("#banner").textContent=`Missing: ${miss.join(", ")}. Close GhostClip and double-click update.bat.`;
 }
+async function poll(){try{render(await (await fetch("/api/state",{cache:"no-store"})).json())}catch(e){$("#htext").textContent="App closed";$("#hdot").className="dot"}setTimeout(poll,1000)}
 
-async function poll(){
-  try{render(await (await fetch("/api/state",{cache:"no-store"})).json())}catch(e){$("#pillText").textContent="App closed"}
-  setTimeout(poll,1000);
+/* ---------- events ---------- */
+async function addStream(start){
+  const inp=$("#addInput"),ch=clean(inp?.value);if(!ch){toast("Type a channel name");return}
+  if(channelList().includes(ch)){toast(`${ch} is already added`);return}
+  inp.value="";
+  await act("/api/add",{channel:ch});
+  if(start)await act("/api/start",{channel:ch,settings:readForm()});
 }
-
-async function act(url,body){$("#err").textContent="";const r=await post(url,body);if(!r.ok&&r.error)$("#err").textContent=r.error;return r}
-$("#startAll").onclick=()=>act("/api/start-all",{channels:channelsFromRows(),settings:readForm()});
-$("#stopAll").onclick=()=>act("/api/stop-all",{});
 $("#streams").addEventListener("click",async e=>{
-  const row=e.target.closest(".srow"),b=e.target.closest("button"); if(!row||!b) return;
-  const name=clean(row.querySelector("input").value), s=lastState?.streams.find(x=>x.channel===name);
-  if(b.classList.contains("go")){
-    if(s&&s.state==="running") await act("/api/stop",{channel:name});
-    else await act("/api/start",{channel:name,channels:channelsFromRows(),settings:readForm()});
-  } else if(b.classList.contains("cut")){
-    const r=await post("/api/clip-now",{channel:name});toast(r.ok?`Clipping the last 40 seconds of ${name}…`:r.error);
-  }
+  if(e.target.id==="addBtn")return addStream(false);
+  if(e.target.id==="addStart")return addStream(true);
+  const card=e.target.closest(".scard"),b=e.target.closest("button");if(!card||!b)return;
+  const ch=card.dataset.ch,s=ST.streams.find(x=>x.channel===ch);
+  if(b.classList.contains("go")){if(s&&s.state==="running")await act("/api/stop",{channel:ch});else await act("/api/start",{channel:ch,settings:readForm()})}
+  else if(b.classList.contains("cut")){const r=await post("/api/clip-now",{channel:ch});toast(r.ok?`Clipping the last 40 seconds of ${ch}…`:r.error)}
+  else if(b.classList.contains("x")){await act("/api/remove",{channel:ch})}
 });
-$("#streams").addEventListener("change",e=>{if(e.target.matches("input"))post("/api/channels",{channels:channelsFromRows()})});
-$("#streams").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches("input"))e.target.closest(".srow").querySelector(".go").click()});
+$("#streams").addEventListener("change",async e=>{
+  if(e.target.classList.contains("game")){const ch=e.target.closest(".scard").dataset.ch;await post("/api/game",{channel:ch,game:e.target.value});toast("Hashtags set for new clips")}
+});
+$("#streams").addEventListener("keydown",e=>{if(e.target.id==="addInput"&&e.key==="Enter")addStream(true)});
+$("#startAll").onclick=()=>act("/api/start-all",{settings:readForm()});
+$("#stopAll").onclick=()=>act("/api/stop-all",{});
 $("#saveSet").onclick=async()=>{const r=await post("/api/settings",{settings:readForm()});fillForm(r.settings);$("#saveMsg").textContent="Saved";setTimeout(()=>$("#saveMsg").textContent="",2000)};
 $("#quit").onclick=async()=>{if(!confirm("Stop all recordings, finish clips and close GhostClip?"))return;await post("/api/quit");toast("Closing… you can close this tab")};
+$("#igBtn").onclick=()=>$("#igPanel").hidden=false;
+$("#igClose").onclick=()=>$("#igPanel").hidden=true;
+$("#igPanel").addEventListener("click",e=>{if(e.target.id==="igPanel")$("#igPanel").hidden=true});
+$("#igOpen").onclick=async()=>{await post("/api/ig/open");toast("Opening the Instagram window…")};
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("button"); if(!t) return;
+  const t=e.target.closest("button");if(!t)return;
   if(t.dataset.pick){
-    const k=t.dataset.pick, input=document.querySelector(`#s_${k}`);
-    if(!windows){toast("Type or paste the folder path in Settings");$("#settings").open=true;input?.focus();return}
+    const k=t.dataset.pick,input=document.querySelector(`#s_${k}`);
+    if(!ST.windows){toast("Type or paste the folder path in Settings");$("#settings").open=true;input?.focus();return}
     const r=await post("/api/pick-folder",{current:input?.value||S[k]});
-    if(r.ok){input.value=r.path;const s=await post("/api/settings",{settings:{[k]:r.path}});fillForm(s.settings);toast("Folder saved")}
+    if(r.ok){if(input)input.value=r.path;const s=await post("/api/settings",{settings:{[k]:r.path}});fillForm(s.settings);toast("Folder saved")}
   }
   if(t.dataset.open){const r=await post("/api/open",{target:t.dataset.open});if(!r.ok)toast(r.error)}
   if(t.dataset.file){const r=await post("/api/open",{target:"clip",file:t.dataset.file});if(!r.ok)toast(r.error)}
   if(t.dataset.copy){const c=$("#clips")._clips[+t.dataset.copy];try{await navigator.clipboard.writeText(c.post||c.file);toast("Caption copied")}catch{toast("Couldn't copy")}}
+  if(t.dataset.ig){
+    const c=$("#clips")._clips[+t.dataset.ig],ig=ST.instagram||{};
+    if(c.instagram&&!confirm("This clip was already posted. Post it again?"))return;
+    try{await navigator.clipboard.writeText(c.post||"")}catch{}
+    if(!ig.available||!ig.window||!ig.logged_in){$("#igPanel").hidden=false;if(ig.available&&!ig.window)post("/api/ig/open");toast("Log in to Instagram first");return}
+    const r=await post("/api/ig/post",{file:c.file});toast(r.ok?"Posting to Instagram…":r.error);
+  }
 });
 poll();
 </script>

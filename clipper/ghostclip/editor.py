@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from . import framing
+from . import framing, games
 from .captions import LAYOUTS, Transcriber, build_ass
 from .utils import run
 
@@ -55,7 +55,7 @@ def video_filter(layout: str, with_subs: bool, plan=None) -> str:
             f"[bg][fg]overlay=0:(H-h)/2,setsar=1{subs}[v]")
 
 
-def post_text(channel: str, kind: str, transcript: str) -> str:
+def post_text(channel: str, kind: str, transcript: str, tags: str = "") -> str:
     hook = {
         "laugh": f"{channel} had chat crying 😂",
         "clip": f"chat said CLIP IT 🎬 ({channel})",
@@ -65,8 +65,7 @@ def post_text(channel: str, kind: str, transcript: str) -> str:
         first = transcript.split(".")[0].strip()
         if 8 <= len(first) <= 80:
             hook = f'"{first}" 💀'
-    tags = f"#{channel} #twitch #twitchclips #streamer #clips #fyp #viral"
-    return f"{hook}\n\n{tags}"
+    return f"{hook}\n\n{tags or games.hashtags(channel, 'none')}"
 
 
 class ClipEditor:
@@ -94,17 +93,20 @@ class ClipEditor:
             "file '{}'\n".format(str(p.resolve()).replace("\\", "/").replace("'", "'\\''")) for p in segments))
         src = ["-f", "concat", "-safe", "0", "-ss", f"{offset:.3f}", "-i", "list.txt", "-t", f"{duration:.3f}"]
 
-        words, transcript = [], ""
+        words, transcript, cap_status = [], "", "off"
         if self.s.captions and self.transcriber and self.transcriber.available:
             r = run(ff + src + ["-vn", "-ac", "1", "-ar", "16000", "audio.wav"], cwd=work)
             if r.returncode == 0:
                 try:
                     words = self.transcriber.transcribe(str(work / "audio.wav"))
                     transcript = " ".join(w.text for w in words)
-                    self.log(f"Captions: {len(words)} words" if words else "Captions: no speech heard in this clip")
+                    cap_status = f"{len(words)} words" if words else "no speech heard"
+                    self.log(f"Captions: {cap_status}")
                 except Exception as e:
-                    self.log(f"Captions failed for this clip ({e.__class__.__name__}: {str(e)[:200]}); saving it without captions")
+                    cap_status = f"failed: {e.__class__.__name__}: {str(e)[:200]}"
+                    self.log(f"Captions {cap_status}; saving the clip without captions")
             else:
+                cap_status = "failed: could not read the clip's audio"
                 self.log("Could not read the clip's audio: " + r.stderr.strip()[-200:])
 
         layout, plan = self.s.layout, None
@@ -151,11 +153,16 @@ class ClipEditor:
             n += 1
         shutil.move(str(out_tmp), final)
 
+        choice = (getattr(self.s, "games", {}) or {}).get(self.s.channel, "auto")
+        category = getattr(self.s, "category", "")
+        game_name, _ = games.resolve(choice, category)
+        tags = games.hashtags(self.s.channel, choice, category)
         info = {
             "file": final.name, "channel": self.s.channel, "time": when.isoformat(timespec="seconds"),
             "kind": event.kind, "hype": event.score, "length": round(duration, 1),
             "transcript": transcript, "chat": event.messages,
-            "post": post_text(self.s.channel, event.kind, transcript),
+            "game": game_name, "captions": cap_status,
+            "post": post_text(self.s.channel, event.kind, transcript, tags),
         }
         final.with_suffix(".json").write_text(json.dumps(info, indent=2, ensure_ascii=False), encoding="utf-8")
         final.with_suffix(".txt").write_text(
