@@ -63,7 +63,7 @@ def main():
     ff = find_tool("ffmpeg")
     root = Path(tempfile.mkdtemp(prefix="ghostclip_e2e_"))
     s = Settings(channel="testchannel", clips_dir=str(root / "clips"), recordings_dir=str(root / "rec"),
-                 pre_roll=20, post_roll=6, min_clip=20, cooldown=20, layout=layout, keep_full_recording=True)
+                 pre_roll=20, post_roll=6, min_clip=20, cooldown=20, layout=layout)
     src = [ff, "-hide_banner", "-loglevel", "error", "-re",
            "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30",
            "-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000",
@@ -84,7 +84,8 @@ def main():
     print("clips:", [c.name for c in clips])
     for c in clips:
         print(json.dumps(json.loads(c.with_suffix(".json").read_text()), indent=1, ensure_ascii=False)[:600])
-    print("recordings:", [p.name for p in (root / "rec").iterdir()])
+    left = [str(p.relative_to(root)) for p in (root / "rec").rglob("*")]
+    print("left in recordings folder:", left or "nothing")
     print("ROOT", root)
     return 0 if clips else 1
 

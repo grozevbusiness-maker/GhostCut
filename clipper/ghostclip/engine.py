@@ -76,12 +76,14 @@ class Engine:
             self.chat.stop()
             self.recorder.stop()
             self.recorder.join(timeout=60)
+            if self.recorder.is_alive():
+                self.log("The recorder didn't shut down; keeping its files instead of deleting them")
             self.jobs.put(None)
             while self.pending:
                 time.sleep(0.5)
             if self.s.keep_full_recording:
                 self._status("Saving the full stream recording...")
-            saved = self.recorder.finalize()
+            saved = self.recorder.finalize() if not self.recorder.is_alive() else []
             for p in saved:
                 self.log(f"Full stream saved: {p}")
             self.state = "stopped"

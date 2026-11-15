@@ -101,11 +101,23 @@ class Recorder(threading.Thread):
     # -- public --------------------------------------------------------------
     def stop(self) -> None:
         self._stop.set()
-        for p in list(self._procs):
+        procs = list(self._procs)
+        for p in procs:
             try:
                 p.terminate()
             except OSError:
                 pass
+
+        def reap():   # anything that ignored the polite request gets closed for good
+            time.sleep(5)
+            for p in procs + list(self._procs):
+                if p.poll() is None:
+                    try:
+                        p.kill()
+                    except OSError:
+                        pass
+
+        threading.Thread(target=reap, daemon=True).start()
 
     def hold(self, key: int, wall: float) -> None:
         with self.lock:
@@ -184,6 +196,8 @@ class Recorder(threading.Thread):
         src = subprocess.Popen(self._source(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                creationflags=NO_WINDOW)
         self._procs.append(src)
+        if self._stop.is_set():
+            src.kill()
         first = src.stdout.read(188 * 64) if src.stdout else b""
         if not first:
             err = src.stderr.read().decode("utf-8", "replace").strip() if src.stderr else ""

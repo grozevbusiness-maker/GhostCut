@@ -154,7 +154,7 @@ const $ = s => document.querySelector(s);
 const FIELDS = [
   ["clips_dir","Clips folder","folder","","Finished clips are saved here."],
   ["recordings_dir","Recordings folder","folder","","The stream recording goes here."],
-  ["keep_full_recording","Keep the whole stream recording","bool","","Off: keep only the last few minutes to save disk space (about 3 GB per hour at 1080p)."],
+  ["keep_full_recording","Also save the whole stream when I press Stop","bool","","Off (default): only the clips are kept. The recording is deleted when you press Stop."],
   ["buffer_minutes","Minutes to keep when not saving the whole stream","number"],
   ["layout","Clip format","select",[["vertical_blur","Vertical 9:16, full frame on blurred background"],["vertical_crop","Vertical 9:16, zoomed to the center"],["original","Original 16:9"]]],
   ["captions","Add captions","bool","","Auto-captions of what the streamer says, word by word."],

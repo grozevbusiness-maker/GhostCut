@@ -27,8 +27,8 @@ the streamer says, and saves it to your clips folder, ready for TikTok, Shorts o
    - `name.txt`: a ready-to-paste post caption and hashtags, what was said, and what chat spammed
    - `clips_log.csv`: a list of every clip
 4. Missed something chat didn't react to? Press **✂ Clip the last 40s**.
-5. When the stream is over, press **Stop**. GhostClip finishes any clip in progress and saves
-   the whole stream as one `.mp4` in your recordings folder.
+5. When the stream is over, press **Stop**. GhostClip finishes any clip in progress, then
+   deletes the recording. Only your clips are kept.
 
 **Choosing your folder:** click **Change** next to "Clips" (or open **Settings**) and pick the
 folder you made. The default is `Videos\GhostClip\Clips`.
@@ -50,7 +50,7 @@ the clip starts about 30 seconds *before* chat exploded and ends about 10 second
 | Clip format | Vertical with blurred background (default), vertical zoomed to the center, or original 16:9. |
 | Seconds before / after | How much of the build-up and the reaction to keep. |
 | Timing nudge | If clips consistently start a bit early or late, adjust it here (e.g. `3` or `-3`). |
-| Keep the whole stream recording | Off = keep only the last 15 minutes, to save disk space (1080p60 is ~3 GB per hour). |
+| Also save the whole stream | Off by default: only the last 15 minutes are kept while recording, and it's all deleted on Stop. Turn on to keep the full stream as one `.mp4`. |
 | Caption accuracy / language | `small` is a good balance. Set the language if auto-detect guesses wrong. |
 | Laughing / hype words | Add the channel's own emotes (e.g. its sub emotes) to make detection sharper. |
 | Twitch token | Optional. With Turbo or a sub to the channel, ads are removed from the recording. |

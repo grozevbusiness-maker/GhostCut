@@ -40,7 +40,7 @@ class Settings:
     channel: str = ""
     clips_dir: str = str(DEFAULT_ROOT / "Clips")
     recordings_dir: str = str(DEFAULT_ROOT / "Recordings")
-    keep_full_recording: bool = True   # False: keep only a rolling buffer, delete the rest
+    keep_full_recording: bool = False  # False: keep only a rolling buffer, delete it all on Stop
     buffer_minutes: int = 15           # rolling buffer size when not keeping the full stream
     quality: str = "1080p60,1080p,936p60,720p60,720p,best"
     twitch_oauth: str = ""             # optional; Turbo/sub token removes ads from the recording
@@ -77,13 +77,17 @@ class Settings:
         s = cls()
         try:
             data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            if data.get("settings_version", 1) < 2:   # v2: full recording off by default
+                data.pop("keep_full_recording", None)
             s.update(data)
         except (OSError, ValueError):
             pass
         return s
 
     def save(self) -> None:
-        SETTINGS_PATH.write_text(json.dumps(asdict(self), indent=2), encoding="utf-8")
+        data = asdict(self)
+        data["settings_version"] = 2
+        SETTINGS_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def update(self, data: dict) -> None:
         for f in fields(self):
