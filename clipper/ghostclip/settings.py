@@ -16,6 +16,7 @@ def app_dir() -> Path:
 
 
 SETTINGS_PATH = app_dir() / "settings.json"
+MAX_STREAMS = 5
 DEFAULT_ROOT = Path.home() / "Videos" / "GhostClip"
 
 
@@ -37,7 +38,8 @@ DEFAULT_CLIP_PHRASES = ["clip it", "clip that", "clipped", "clip this", "someone
 
 @dataclass
 class Settings:
-    channel: str = ""
+    channel: str = ""                  # last single channel (older versions)
+    channels: list = field(default_factory=list)   # up to MAX_STREAMS channels shown in the dashboard
     clips_dir: str = str(DEFAULT_ROOT / "Clips")
     recordings_dir: str = str(DEFAULT_ROOT / "Recordings")
     keep_full_recording: bool = False  # False: keep only a rolling buffer, delete it all on Stop
@@ -60,7 +62,8 @@ class Settings:
     clip_phrases: list = field(default_factory=lambda: list(DEFAULT_CLIP_PHRASES))
 
     # Editing
-    layout: str = "vertical_blur"      # vertical_blur | vertical_crop | original
+    layout: str = "stack"              # stack | vertical_crop | vertical_blur | original
+    facecam: str = "auto"              # auto | none | top-left | top-right | bottom-left | bottom-right
     captions: bool = True
     whisper_model: str = "small"       # tiny | base | small | medium | large-v3
     whisper_device: str = "auto"       # auto | cuda | cpu
@@ -79,6 +82,8 @@ class Settings:
             data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
             if data.get("settings_version", 1) < 2:   # v2: full recording off by default
                 data.pop("keep_full_recording", None)
+            if data.get("settings_version", 1) < 3:   # v3: face cam on top + gameplay layout
+                data.pop("layout", None)
             s.update(data)
         except (OSError, ValueError):
             pass
@@ -86,7 +91,7 @@ class Settings:
 
     def save(self) -> None:
         data = asdict(self)
-        data["settings_version"] = 2
+        data["settings_version"] = 3
         SETTINGS_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def update(self, data: dict) -> None:
@@ -112,6 +117,14 @@ class Settings:
                 continue
             setattr(self, f.name, val)
         self.channel = clean_channel(self.channel)
+        chans = []
+        for c in self.channels:
+            c = clean_channel(c)
+            if c and c not in chans:
+                chans.append(c)
+        if not chans and self.channel and "channels" not in data:
+            chans = [self.channel]
+        self.channels = chans[:MAX_STREAMS]
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -126,3 +139,14 @@ def clean_channel(text: str) -> str:
     if m:
         text = m.group(1)
     return text.lstrip("#@").strip().lower()
+
+
+class ChannelView:
+    """The shared settings, but with one stream's channel name. Changes to the shared settings apply live."""
+
+    def __init__(self, base: Settings, channel: str):
+        self._base = base
+        self.channel = channel
+
+    def __getattr__(self, name):
+        return getattr(self._base, name)

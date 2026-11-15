@@ -17,6 +17,8 @@ from .hype import HypeDetector, HypeEvent
 from .recorder import Recorder
 
 _ids = itertools.count(1)
+RENDER_LOCK = threading.Lock()   # with several streams, edit one clip at a time so the PC keeps up
+MIN_USABLE = 15                  # seconds; shorter moments (e.g. right after recording starts) are skipped
 
 
 @dataclass
@@ -173,9 +175,18 @@ class Engine:
             self.log("Skipped a moment: the recording doesn't cover it (was the stream recording yet?)")
             return
         segs, offset, dur = found
-        self._status(f"Editing a {dur:.0f}s clip...")
-        t0 = time.time()
-        path = self.editor.make(segs, offset, dur, job.event, datetime.fromtimestamp(job.wall_a))
+        if dur < MIN_USABLE and job.event.kind != "manual":
+            self.log(f"Skipped a moment: only {dur:.0f}s of it was recorded (it happened right as recording started)")
+            return
+        if not RENDER_LOCK.acquire(blocking=False):
+            self._status("Clip waiting its turn (another stream's clip is being edited)...")
+            RENDER_LOCK.acquire()
+        try:
+            self._status(f"Editing a {dur:.0f}s clip...")
+            t0 = time.time()
+            path = self.editor.make(segs, offset, dur, job.event, datetime.fromtimestamp(job.wall_a))
+        finally:
+            RENDER_LOCK.release()
         self.made.appendleft(str(path))
         self.log(f"Clip saved: {path.name} ({dur:.0f}s, edited in {time.time() - t0:.0f}s)")
         self.on_clip(str(path))

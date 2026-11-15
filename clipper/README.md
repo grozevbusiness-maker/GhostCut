@@ -1,9 +1,10 @@
 # GhostClip: automatic Twitch clipper
 
-GhostClip records a Twitch stream on your PC, reads the chat as it happens, and when chat
-goes wild (laughing, `LMFAO`, `KEKW`, 😂💀, `W W W`, "CLIP IT") it cuts that moment into a
-30–90 second clip. It reframes the clip to vertical 9:16, adds word-by-word captions of what
-the streamer says, and saves it to your clips folder, ready for TikTok, Shorts or Reels.
+GhostClip records up to 5 Twitch streams at once on your PC, reads their chats as they happen,
+and when chat goes wild (laughing, `LMFAO`, `KEKW`, 😂💀, `W W W`, "CLIP IT") it cuts that moment
+into a 30–90 second clip. It makes the clip fill a phone screen (streamer's face cam on top, the
+middle of the stream below), adds word-by-word captions of what the streamer says, and saves it to
+your clips folder, ready for TikTok, Shorts or Reels.
 
 ## Set up (once, on Windows)
 
@@ -17,7 +18,7 @@ the streamer says, and saves it to your clips folder, ready for TikTok, Shorts o
 
 1. Double-click **GhostClip** on your desktop. A black window opens (keep it open) and the
    dashboard opens in your browser.
-2. Type the channel name (or paste the twitch.tv link) and press **Start recording**.
+2. Type up to 5 channel names (or paste twitch.tv links) and press **Start** on each, or **Start all**.
    - You can press Start before the stream begins. GhostClip waits and starts recording
      the moment the streamer goes live. If the stream drops and comes back, it carries on.
    - GhostClip records the stream by itself, so you don't need Twitch open in your browser.
@@ -26,12 +27,25 @@ the streamer says, and saves it to your clips folder, ready for TikTok, Shorts o
    - `name.mp4`: the finished clip
    - `name.txt`: a ready-to-paste post caption and hashtags, what was said, and what chat spammed
    - `clips_log.csv`: a list of every clip
-4. Missed something chat didn't react to? Press **✂ Clip the last 40s**.
-5. When the stream is over, press **Stop**. GhostClip finishes any clip in progress, then
+4. Missed something chat didn't react to? Press **✂** on that stream's row to clip its last 40 seconds.
+5. When a stream is over, press its **Stop** (or **Stop all**). GhostClip finishes any clip in progress, then
    deletes the recording. Only your clips are kept.
 
 **Choosing your folder:** click **Change** next to "Clips" (or open **Settings**) and pick the
 folder you made. The default is `Videos\GhostClip\Clips`.
+
+## Updating
+
+Close GhostClip, then double-click **`update.bat`**. It downloads the newest version and
+keeps your settings.
+
+## The clip layout
+
+GhostClip finds the streamer's face cam by itself (it looks for a face that stays in one place
+away from the middle of the screen) and puts it on top, with the middle of the stream below and
+captions at the bottom. If a streamer has no face cam, or is full-screen on camera, the clip is
+zoomed into the middle instead. If it picks the wrong spot for a streamer, set **Where is the
+face cam?** in Settings to the right corner.
 
 ## How it picks moments
 
@@ -47,7 +61,8 @@ the clip starts about 30 seconds *before* chat exploded and ends about 10 second
 | Setting | What it does |
 | --- | --- |
 | How easily to clip | Slide right for more clips, left for only the biggest moments. |
-| Clip format | Vertical with blurred background (default), vertical zoomed to the center, or original 16:9. |
+| Clip format | Face cam on top + gameplay (default), zoomed to the center only, whole picture on a blurred background, or original 16:9. |
+| Where is the face cam? | Automatic, or pick a corner if auto gets it wrong. |
 | Seconds before / after | How much of the build-up and the reaction to keep. |
 | Timing nudge | If clips consistently start a bit early or late, adjust it here (e.g. `3` or `-3`). |
 | Also save the whole stream | Off by default: only the last 15 minutes are kept while recording, and it's all deleted on Stop. Turn on to keep the full stream as one `.mp4`. |
@@ -87,5 +102,6 @@ python tests/demo_dashboard.py          # dashboard with a fake stream and fake 
 | `ghostclip/recorder.py` | streamlink → ffmpeg 10-second pieces, maps chat time to video time |
 | `ghostclip/editor.py` | Cuts, reframes, normalizes audio, burns in captions |
 | `ghostclip/captions.py` | faster-whisper word timings → styled ASS captions |
-| `ghostclip/engine.py` | Runs one session and ties the parts together |
+| `ghostclip/framing.py` | Finds the face cam (bundled YuNet face model, MIT licence) |
+| `ghostclip/engine.py` | Runs one stream's session; clips from all streams are edited one at a time |
 | `ghostclip/web.py`, `dashboard.html` | Local dashboard on 127.0.0.1 |

@@ -1,4 +1,5 @@
-"""The local dashboard: a small web server on 127.0.0.1 that the browser talks to."""
+"""The local dashboard: a small web server on 127.0.0.1 that the browser talks to.
+Runs up to MAX_STREAMS clipping sessions (one per channel) side by side."""
 from __future__ import annotations
 
 import importlib.util
@@ -13,9 +14,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from . import framing
 from .captions import Transcriber
 from .engine import Engine
-from .settings import Settings, app_dir, clean_channel
+from .settings import MAX_STREAMS, ChannelView, Settings, app_dir, clean_channel
 from .utils import find_tool, open_path, run
 
 HERE = Path(__file__).resolve().parent
@@ -24,14 +26,14 @@ HERE = Path(__file__).resolve().parent
 class App:
     def __init__(self, settings: Settings, source_cmd=None, chat_source=None):
         self.s = settings
-        self.engine: Engine | None = None
-        self.logs: deque = deque(maxlen=300)
+        self.engines: dict[str, Engine] = {}
+        self.logs: deque = deque(maxlen=400)
         self.log_file = app_dir() / "ghostclip.log"
         self._transcriber: Transcriber | None = None
         self.source_cmd = source_cmd
         self.chat_source = chat_source
         self.quit_event = threading.Event()
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
     # -- helpers ---------------------------------------------------------------
     def log(self, text: str) -> None:
@@ -48,6 +50,7 @@ class App:
         return find_tool("ffmpeg", self.s.ffmpeg_path)
 
     def transcriber(self) -> Transcriber | None:
+        """One speech model shared by every stream (it's big)."""
         if not self.s.captions:
             return None
         t = self._transcriber
@@ -57,18 +60,33 @@ class App:
         return self._transcriber
 
     def checks(self) -> dict:
-        has = lambda m: importlib.util.find_spec(m) is not None
-        return {"ffmpeg": bool(self.ffmpeg()), "streamlink": has("streamlink"), "whisper": has("faster_whisper")}
+        has = lambda m: importlib.util.find_spec(m) is not None  # noqa: E731
+        return {"ffmpeg": bool(self.ffmpeg()), "streamlink": has("streamlink"),
+                "whisper": has("faster_whisper"), "facecam": framing.available()}
+
+    def running(self) -> list[Engine]:
+        return [e for e in self.engines.values() if e.state != "stopped"]
 
     # -- actions ---------------------------------------------------------------
-    def start(self, channel: str | None = None) -> str | None:
+    def set_channels(self, channels: list[str]) -> None:
         with self.lock:
-            if self.engine and self.engine.state != "stopped":
-                return "Already running"
-            if channel is not None:
-                self.s.channel = clean_channel(channel)
-            if not self.s.channel:
-                return "Type the Twitch channel name first"
+            self.s.update({"channels": channels})
+            # keep channels that are still recording even if their box was cleared
+            for ch, e in self.engines.items():
+                if e.state != "stopped" and ch not in self.s.channels and len(self.s.channels) < MAX_STREAMS:
+                    self.s.channels.append(ch)
+            self.s.save()
+
+    def start(self, channel: str) -> str | None:
+        channel = clean_channel(channel)
+        with self.lock:
+            if not channel:
+                return "Type a Twitch channel name first"
+            e = self.engines.get(channel)
+            if e and e.state != "stopped":
+                return None
+            if len(self.running()) >= MAX_STREAMS:
+                return f"Already recording {MAX_STREAMS} streams"
             ff = self.ffmpeg()
             if not ff:
                 return "ffmpeg was not found. Run setup_windows.bat again, or set its path in Settings."
@@ -77,19 +95,51 @@ class App:
             for d in (self.s.clips_dir, self.s.recordings_dir):
                 try:
                     Path(d).mkdir(parents=True, exist_ok=True)
-                except OSError as e:
-                    return f"Can't use the folder {d}: {e}"
+                except OSError as ex:
+                    return f"Can't use the folder {d}: {ex}"
+            if channel not in self.s.channels:
+                self.s.channels = (self.s.channels + [channel])[-MAX_STREAMS:]
+            self.s.channel = channel
             self.s.save()
-            self.engine = Engine(self.s, ff, self.transcriber(), self.log,
-                                 source_cmd=self.source_cmd, chat_source=self.chat_source)
-            self.engine.start()
+            view = ChannelView(self.s, channel)
+            eng = Engine(view, ff, self.transcriber(), lambda m, c=channel: self.log(f"[{c}] {m}"),
+                         source_cmd=self.source_cmd, chat_source=self.chat_source)
+            self.engines[channel] = eng
+            eng.start()
             return None
 
-    def stop(self) -> None:
-        if self.engine:
-            self.engine.stop()
+    def stop(self, channel: str) -> None:
+        e = self.engines.get(clean_channel(channel))
+        if e:
+            e.stop()
 
-    def clips(self, limit: int = 30) -> list[dict]:
+    def stop_all(self, done=None) -> None:
+        live = self.running()
+        if not live:
+            if done:
+                done()
+            return
+        left = [len(live)]
+        lock = threading.Lock()
+
+        def one_done():
+            with lock:
+                left[0] -= 1
+                if left[0] == 0 and done:
+                    done()
+
+        for e in live:
+            if e.state == "running":
+                e.stop(done=one_done)
+            else:   # already stopping: wait for it in the background
+                threading.Thread(target=lambda e=e: (self._wait(e), one_done()), daemon=True).start()
+
+    @staticmethod
+    def _wait(e: Engine) -> None:
+        while e.state != "stopped":
+            time.sleep(0.5)
+
+    def clips(self, limit: int = 40) -> list[dict]:
         d = Path(self.s.clips_dir)
         if not d.is_dir():
             return []
@@ -102,34 +152,37 @@ class App:
             except (OSError, ValueError):
                 pass
             info["url"] = "/clips/" + f.name
-            info["mtime"] = f.stat().st_mtime
-            info["size_mb"] = round(f.stat().st_size / 1e6, 1)
             out.append(info)
         return out
 
-    def state(self) -> dict:
-        e = self.engine
-        now = time.time()
-        st = {
-            "state": e.state if e else "stopped",
-            "status": e.status if e else "Ready",
-            "chat": e.chat_status if e else "",
-            "channel": self.s.channel,
-            "settings": self.s.to_dict(),
-            "checks": self.checks(),
-            "log": list(self.logs)[-80:],
-            "clips": self.clips(),
-            "windows": os.name == "nt",
-        }
+    def stream_state(self, channel: str, now: float) -> dict:
+        e = self.engines.get(channel)
+        st = {"channel": channel, "state": e.state if e else "stopped", "status": e.status if e else "Not started"}
         if e:
             d = e.detector
             st.update({
-                "rate": d.rate_per_min(now), "score": round(d.score, 2), "threshold": round(d.threshold, 2),
-                "history": [[round(t - now, 1), s, th] for t, s, th in d.history],
-                "pending": e.pending, "session_clips": len(e.made),
+                "chat": e.chat_status, "rate": d.rate_per_min(now), "score": round(d.score, 2),
+                "threshold": round(d.threshold, 2), "pending": e.pending, "clips": len(e.made),
                 "uptime": int(now - e.started), "in_moment": d.event is not None,
+                "history": [[round(t - now, 1), s, th] for t, s, th in list(d.history)[-120:]],
             })
         return st
+
+    def state(self) -> dict:
+        now = time.time()
+        names = list(self.s.channels)
+        for ch, e in self.engines.items():
+            if e.state != "stopped" and ch not in names:
+                names.append(ch)
+        return {
+            "streams": [self.stream_state(ch, now) for ch in names],
+            "max_streams": MAX_STREAMS,
+            "settings": self.s.to_dict(),
+            "checks": self.checks(),
+            "log": list(self.logs)[-100:],
+            "clips": self.clips(),
+            "windows": os.name == "nt",
+        }
 
     def pick_folder(self, current: str) -> str | None:
         if os.name != "nt":
@@ -225,22 +278,31 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             data = {}
         app, path = self.app, urlparse(self.path).path
+        if "settings" in data:
+            self._apply(data["settings"])
+        if "channels" in data:
+            app.set_channels(data["channels"])
+        ch = data.get("channel", "")
         if path == "/api/start":
-            if "settings" in data:
-                self._apply(data["settings"])
-            err = app.start(data.get("channel"))
+            err = app.start(ch)
             self._json({"ok": err is None, "error": err})
+        elif path == "/api/start-all":
+            errs = [f"{c}: {e}" for c in app.s.channels if (e := app.start(c))]
+            self._json({"ok": not errs, "error": "; ".join(errs) or None})
         elif path == "/api/stop":
-            app.stop()
+            app.stop(ch)
+            self._json({"ok": True})
+        elif path == "/api/stop-all":
+            app.stop_all()
             self._json({"ok": True})
         elif path == "/api/clip-now":
-            if app.engine and app.engine.state == "running":
-                app.engine.clip_now()
+            e = app.engines.get(clean_channel(ch))
+            if e and e.state == "running":
+                e.clip_now()
                 self._json({"ok": True})
             else:
                 self._json({"ok": False, "error": "Start recording first"})
-        elif path == "/api/settings":
-            self._apply(data)
+        elif path in ("/api/settings", "/api/channels"):
             self._json({"ok": True, "settings": app.s.to_dict()})
         elif path == "/api/pick-folder":
             chosen = app.pick_folder(data.get("current", ""))
@@ -257,10 +319,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": "Not found yet"})
         elif path == "/api/quit":
             self._json({"ok": True})
-            if app.engine and app.engine.state == "running":
-                app.engine.stop(done=app.quit_event.set)
-            else:
-                app.quit_event.set()
+            app.log("Quitting: finishing clips first...")
+            app.stop_all(done=app.quit_event.set)
         else:
             self.send_error(404)
 
@@ -269,12 +329,12 @@ class Handler(BaseHTTPRequestHandler):
         data = dict(data)
         if data.get("twitch_oauth") == "set":
             data.pop("twitch_oauth")
+        data.pop("channels", None)
         app.s.update(data)
         app.s.save()
-        if app.engine:
-            app.engine.detector.scorer.update_words(app.s.laugh_words, app.s.hype_words, app.s.clip_phrases)
-            if app.engine.editor:
-                app.engine.editor.transcriber = app.transcriber()
+        for e in app.engines.values():
+            e.detector.scorer.update_words(app.s.laugh_words, app.s.hype_words, app.s.clip_phrases)
+            e.editor.transcriber = app.transcriber()
 
 
 def serve(app: App, port: int) -> ThreadingHTTPServer:

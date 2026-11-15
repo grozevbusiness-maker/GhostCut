@@ -85,6 +85,18 @@ details.card[open]>summary{margin-bottom:12px}
 input[type=range]{width:100%;accent-color:var(--accent)}
 pre.log{margin:0;max-height:260px;overflow:auto;font:12px/1.5 ui-monospace,Consolas,monospace;color:var(--muted);white-space:pre-wrap;word-break:break-word}
 .banner{margin:14px 20px 0;padding:11px 14px;border-radius:10px;background:color-mix(in srgb,var(--warn) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);font-weight:600}
+.streams{display:flex;flex-direction:column;gap:10px}
+.srow{background:var(--sunk);border-radius:12px;padding:10px 11px}
+.srow .top{display:flex;gap:6px;align-items:center}
+.srow input{background:var(--surface);font-weight:600}
+.srow .go{padding:9px 13px}
+.srow .cut{padding:9px 10px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.srow .info{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-top:7px}
+.srow .info b{color:var(--ink);font-weight:600}
+.srow .st{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .meter{height:7px;margin:7px 0 0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--live);animation:pulse 1.4s infinite}.dot.wait{background:var(--warn)}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none}
 .toast.on{opacity:1}
 </style>
@@ -101,32 +113,15 @@ pre.log{margin:0;max-height:260px;overflow:auto;font:12px/1.5 ui-monospace,Conso
 <main>
   <div class="col">
     <section class="card">
-      <h2>Stream</h2>
-      <label class="f" for="channel">Twitch channel</label>
-      <input class="big" type="text" id="channel" placeholder="channel name or twitch.tv link" autocomplete="off" spellcheck="false">
-      <div class="hint">Start before or after the stream goes live. GhostClip waits for it and records on its own.</div>
+      <h2>Streams <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:500">up to 5 at once</span></h2>
+      <div class="streams" id="streams"></div>
       <div class="row" style="margin-top:12px">
-        <button class="btn wide" id="startBtn">Start recording</button>
+        <button class="btn" style="flex:1" id="startAll">Start all</button>
+        <button class="btn alt" style="flex:1" id="stopAll">Stop all</button>
       </div>
-      <div class="row" style="margin-top:8px">
-        <button class="btn alt wide" id="clipNow" disabled title="Clip the last ~40 seconds now">✂ Clip the last 40s</button>
-      </div>
+      <div class="hint">Type channel names, then Start. You can start before a stream goes live: GhostClip waits for it.</div>
       <div class="err" id="err"></div>
       <div class="folder"><span>Clips:</span><code id="clipsDir"></code><button data-pick="clips_dir">Change</button><button data-open="clips">Open</button></div>
-    </section>
-
-    <section class="card">
-      <h2>Chat hype</h2>
-      <div class="meter" id="meter"><div></div></div>
-      <div class="meter-label"><span id="meterText">Not running</span><span>clip line</span></div>
-      <canvas id="chart" width="700" height="220" aria-label="Chat hype over the last three minutes"></canvas>
-      <div class="stats">
-        <div class="stat"><b id="rate">0</b><span>chat msgs / min</span></div>
-        <div class="stat"><b id="sclips">0</b><span>clips this session</span></div>
-        <div class="stat"><b id="uptime">0:00</b><span>running</span></div>
-      </div>
-      <div class="sub" id="status">Ready</div>
-      <div class="sub" id="chatStatus"></div>
     </section>
 
     <details class="card set" id="settings">
@@ -156,7 +151,8 @@ const FIELDS = [
   ["recordings_dir","Recordings folder","folder","","The stream recording goes here."],
   ["keep_full_recording","Also save the whole stream when I press Stop","bool","","Off (default): only the clips are kept. The recording is deleted when you press Stop."],
   ["buffer_minutes","Minutes to keep when not saving the whole stream","number"],
-  ["layout","Clip format","select",[["vertical_blur","Vertical 9:16, full frame on blurred background"],["vertical_crop","Vertical 9:16, zoomed to the center"],["original","Original 16:9"]]],
+  ["layout","Clip format","select",[["stack","Phone: face cam on top, gameplay below (recommended)"],["vertical_crop","Phone: zoomed to the center only"],["vertical_blur","Phone: whole picture on a blurred background"],["original","Original 16:9"]]],
+  ["facecam","Where is the face cam?","select",[["auto","Find it automatically"],["top-left","Top left"],["top-right","Top right"],["bottom-left","Bottom left"],["bottom-right","Bottom right"],["none","No face cam"]],"Only change this if auto picks the wrong spot for a streamer."],
   ["captions","Add captions","bool","","Auto-captions of what the streamer says, word by word."],
   ["whisper_model","Caption accuracy","select",[["tiny","Fastest"],["base","Fast"],["small","Good (recommended)"],["medium","Best (slow without a GPU)"]]],
   ["language","Stream language","select",[["","Detect automatically"],["en","English"],["es","Spanish"],["pt","Portuguese"],["fr","French"],["de","German"],["it","Italian"],["ru","Russian"],["bg","Bulgarian"],["pl","Polish"],["tr","Turkish"],["ja","Japanese"],["ko","Korean"]]],
@@ -176,7 +172,7 @@ const FIELDS = [
   ["twitch_oauth","Twitch token (optional, removes ads if you have Turbo or a sub)","password"],
   ["ffmpeg_path","ffmpeg location (leave empty to find it)","text"],
 ];
-const WIDE = new Set(["clips_dir","recordings_dir","keep_full_recording","layout","captions","sensitivity","laugh_words","hype_words","clip_phrases","quality","twitch_oauth","ffmpeg_path","credit"]);
+const WIDE = new Set(["facecam","clips_dir","recordings_dir","keep_full_recording","layout","captions","sensitivity","laugh_words","hype_words","clip_phrases","quality","twitch_oauth","ffmpeg_path","credit"]);
 let S = null, formFilled = false, clipKey = "", lastState = null, windows = false;
 
 function esc(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -219,19 +215,45 @@ function readForm(){
 
 function fmtTime(sec){sec=sec|0;const h=sec/3600|0,m=(sec%3600)/60|0,s=sec%60;return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`}
 
-function drawChart(hist){
-  const c=$("#chart"),g=c.getContext("2d"),W=c.width,H=c.height,cs=getComputedStyle(document.documentElement);
-  g.clearRect(0,0,W,H);
-  const line=cs.getPropertyValue("--line"),acc=cs.getPropertyValue("--accent"),hot=cs.getPropertyValue("--hype"),mut=cs.getPropertyValue("--muted");
-  g.strokeStyle=line;g.lineWidth=1;g.beginPath();g.moveTo(0,H-1);g.lineTo(W,H-1);g.stroke();
-  if(!hist||hist.length<2){g.fillStyle=mut;g.font="22px system-ui";g.fillText("Chat activity shows here once recording starts",16,H/2);return}
-  const max=Math.max(...hist.map(h=>Math.max(h[1],h[2])),1)*1.15;
-  const x=t=>W+(t/180)*W, y=v=>H-6-(v/max)*(H-14);
-  g.setLineDash([8,7]);g.strokeStyle=mut;g.lineWidth=2;g.beginPath();
-  hist.forEach((h,i)=>i?g.lineTo(x(h[0]),y(h[2])):g.moveTo(x(h[0]),y(h[2])));g.stroke();g.setLineDash([]);
-  g.lineWidth=3;g.lineJoin="round";
-  for(let i=1;i<hist.length;i++){const a=hist[i-1],b=hist[i];g.strokeStyle=b[1]>=b[2]?hot:acc;g.beginPath();g.moveTo(x(a[0]),y(a[1]));g.lineTo(x(b[0]),y(b[1]));g.stroke()}
-  g.fillStyle=mut;g.font="20px system-ui";g.fillText("3 min ago",8,24);g.textAlign="right";g.fillText("now",W-8,24);g.textAlign="left";
+function clean(v){v=(v||"").trim();const m=v.match(/twitch\.tv\/([A-Za-z0-9_]+)/);if(m)v=m[1];return v.replace(/^[#@]+/,"").trim().toLowerCase()}
+let rowsBuilt=false;
+function buildRows(n,streams){
+  const box=$("#streams");box.innerHTML="";
+  for(let i=0;i<n;i++){
+    const d=document.createElement("div");d.className="srow";d.dataset.i=i;
+    d.innerHTML=`<div class="top"><span class="dot"></span><input type="text" placeholder="channel ${i+1}" spellcheck="false" autocomplete="off">
+      <button class="btn go">Start</button><button class="btn cut" title="Clip the last ~40 seconds now" disabled>✂</button></div>
+      <div class="meter"><div></div></div>
+      <div class="info"><span class="st">Not started</span><span><b class="rate">0</b> msgs/min · <b class="nclips">0</b> clips</span></div>`;
+    d.querySelector("input").value=streams[i]?.channel||"";
+    box.appendChild(d);
+  }
+  rowsBuilt=true;
+}
+function channelsFromRows(){return [...document.querySelectorAll(".srow input")].map(i=>clean(i.value)).filter(Boolean)}
+function renderStreams(st){
+  if(!rowsBuilt) buildRows(st.max_streams,st.streams);
+  const by={};st.streams.forEach(s=>by[s.channel]=s);
+  let live=0,waiting=0;
+  document.querySelectorAll(".srow").forEach(row=>{
+    const inp=row.querySelector("input"),name=clean(inp.value),s=by[name];
+    const state=s?.state||"stopped",running=state==="running",stopping=state==="stopping";
+    const rec=running&&/Recording/.test(s.status);
+    if(rec) live++; else if(running) waiting++;
+    row.querySelector(".dot").className="dot"+(rec?" live":running||stopping?" wait":"");
+    const go=row.querySelector(".go");
+    go.textContent=stopping?"…":running?"Stop":"Start";go.className="btn go"+(running?" stop":"");go.disabled=stopping||(!name&&!running);
+    row.querySelector(".cut").disabled=!running;
+    inp.disabled=running||stopping;
+    let status=s?(running&&s.in_moment?"🔥 Hype moment! Clipping…":s.status):(name?"Not started":"Empty");
+    if(s?.pending && !s.in_moment) status=`Making ${s.pending} clip${s.pending>1?"s":""}… `+status;
+    row.querySelector(".st").textContent=status;row.querySelector(".st").title=(s?.status||"")+(s?.chat?" · "+s.chat:"");
+    row.querySelector(".rate").textContent=s?.rate??0;row.querySelector(".nclips").textContent=s?.clips??0;
+    const pct=s?.threshold?Math.min(100,s.score/s.threshold*100):0;
+    row.querySelector(".meter").classList.toggle("hot",pct>=100);row.querySelector(".meter div").style.width=(running?pct:0)+"%";
+  });
+  const pill=$("#pill");pill.className="pill"+(live?" live":waiting?" wait":"");
+  $("#pillText").textContent=live?`Recording ${live} stream${live>1?"s":""}`+(waiting?`, ${waiting} waiting`:""):waiting?`Waiting for ${waiting} stream${waiting>1?"s":""} to go live`:"Ready";
 }
 
 function renderClips(clips){
@@ -253,25 +275,16 @@ function renderClips(clips){
 
 function render(st){
   lastState=st; windows=st.windows; S=st.settings;
-  if(!formFilled){buildForm();fillForm(S);formFilled=true;$("#channel").value=st.channel||""}
-  const running=st.state==="running", stopping=st.state==="stopping";
-  const pill=$("#pill"); pill.className="pill"+(running&&/Recording/.test(st.status)?" live":running||stopping?" wait":"");
-  $("#pillText").textContent= stopping?"Stopping":running?(/Recording/.test(st.status)?"Recording":"Waiting for live"):"Ready";
-  const b=$("#startBtn"); b.textContent=stopping?"Finishing up…":running?"Stop":"Start recording"; b.className="btn wide"+(running?" stop":""); b.disabled=stopping;
-  $("#clipNow").disabled=!running; $("#channel").disabled=running||stopping;
+  if(!formFilled){buildForm();fillForm(S);formFilled=true}
+  renderStreams(st);
   $("#clipsDir").textContent=S.clips_dir; $("#clipsDir").title=S.clips_dir;
-  $("#status").textContent=st.status; $("#chatStatus").textContent=st.chat||"";
-  $("#rate").textContent=st.rate??0; $("#sclips").textContent=st.session_clips??0; $("#uptime").textContent=fmtTime(st.uptime||0);
-  const pct=st.threshold?Math.min(100,st.score/st.threshold*100):0;
-  $("#meter").classList.toggle("hot",pct>=100); $("#meter div").style.width=pct+"%";
-  $("#meterText").textContent= running ? (st.in_moment?"🔥 Hype moment! Clipping…":pct>=60?"Chat is heating up":"Chat is calm") : "Not running";
-  $("#pending").textContent=st.pending?`${st.pending} clip${st.pending>1?"s":""} being made…`:"";
-  drawChart(st.history);
+  const pend=st.streams.reduce((n,s)=>n+(s.pending||0),0);
+  $("#pending").textContent=pend?`${pend} clip${pend>1?"s":""} being made…`:"";
   renderClips(st.clips||[]);
   const lg=$("#log"), atBottom=lg.scrollHeight-lg.scrollTop-lg.clientHeight<30;
   lg.textContent=(st.log||[]).join("\n"); if(atBottom) lg.scrollTop=lg.scrollHeight;
-  const miss=[]; if(!st.checks.ffmpeg) miss.push("ffmpeg"); if(!st.checks.streamlink) miss.push("streamlink"); if(!st.checks.whisper) miss.push("captions (faster-whisper)");
-  $("#banner").hidden=!miss.length; if(miss.length) $("#banner").textContent=`Missing: ${miss.join(", ")}. Close this window and run setup_windows.bat again.`;
+  const miss=[]; if(!st.checks.ffmpeg) miss.push("ffmpeg"); if(!st.checks.streamlink) miss.push("streamlink"); if(!st.checks.whisper) miss.push("captions (faster-whisper)"); if(!st.checks.facecam) miss.push("face cam finder (opencv)");
+  $("#banner").hidden=!miss.length; if(miss.length) $("#banner").textContent=`Missing: ${miss.join(", ")}. Close GhostClip and run setup_windows.bat (or update.bat) again.`;
 }
 
 async function poll(){
@@ -279,28 +292,35 @@ async function poll(){
   setTimeout(poll,1000);
 }
 
-$("#startBtn").onclick=async()=>{
-  $("#err").textContent="";
-  if(lastState?.state==="running"){await post("/api/stop");return}
-  const r=await post("/api/start",{channel:$("#channel").value,settings:readForm()});
-  if(!r.ok) $("#err").textContent=r.error;
-};
-$("#clipNow").onclick=async()=>{const r=await post("/api/clip-now");toast(r.ok?"Clipping the last 40 seconds…":r.error)};
-$("#saveSet").onclick=async()=>{const r=await post("/api/settings",readForm());fillForm(r.settings);$("#saveMsg").textContent="Saved";setTimeout(()=>$("#saveMsg").textContent="",2000)};
-$("#quit").onclick=async()=>{if(!confirm("Stop recording, finish clips and close GhostClip?"))return;await post("/api/quit");toast("Closing… you can close this tab")};
+async function act(url,body){$("#err").textContent="";const r=await post(url,body);if(!r.ok&&r.error)$("#err").textContent=r.error;return r}
+$("#startAll").onclick=()=>act("/api/start-all",{channels:channelsFromRows(),settings:readForm()});
+$("#stopAll").onclick=()=>act("/api/stop-all",{});
+$("#streams").addEventListener("click",async e=>{
+  const row=e.target.closest(".srow"),b=e.target.closest("button"); if(!row||!b) return;
+  const name=clean(row.querySelector("input").value), s=lastState?.streams.find(x=>x.channel===name);
+  if(b.classList.contains("go")){
+    if(s&&s.state==="running") await act("/api/stop",{channel:name});
+    else await act("/api/start",{channel:name,channels:channelsFromRows(),settings:readForm()});
+  } else if(b.classList.contains("cut")){
+    const r=await post("/api/clip-now",{channel:name});toast(r.ok?`Clipping the last 40 seconds of ${name}…`:r.error);
+  }
+});
+$("#streams").addEventListener("change",e=>{if(e.target.matches("input"))post("/api/channels",{channels:channelsFromRows()})});
+$("#streams").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches("input"))e.target.closest(".srow").querySelector(".go").click()});
+$("#saveSet").onclick=async()=>{const r=await post("/api/settings",{settings:readForm()});fillForm(r.settings);$("#saveMsg").textContent="Saved";setTimeout(()=>$("#saveMsg").textContent="",2000)};
+$("#quit").onclick=async()=>{if(!confirm("Stop all recordings, finish clips and close GhostClip?"))return;await post("/api/quit");toast("Closing… you can close this tab")};
 document.addEventListener("click",async e=>{
   const t=e.target.closest("button"); if(!t) return;
   if(t.dataset.pick){
     const k=t.dataset.pick, input=document.querySelector(`#s_${k}`);
     if(!windows){toast("Type or paste the folder path in Settings");$("#settings").open=true;input?.focus();return}
     const r=await post("/api/pick-folder",{current:input?.value||S[k]});
-    if(r.ok){input.value=r.path;const s=await post("/api/settings",{[k]:r.path});fillForm(s.settings);toast("Folder saved")}
+    if(r.ok){input.value=r.path;const s=await post("/api/settings",{settings:{[k]:r.path}});fillForm(s.settings);toast("Folder saved")}
   }
   if(t.dataset.open){const r=await post("/api/open",{target:t.dataset.open});if(!r.ok)toast(r.error)}
   if(t.dataset.file){const r=await post("/api/open",{target:"clip",file:t.dataset.file});if(!r.ok)toast(r.error)}
   if(t.dataset.copy){const c=$("#clips")._clips[+t.dataset.copy];try{await navigator.clipboard.writeText(c.post||c.file);toast("Caption copied")}catch{toast("Couldn't copy")}}
 });
-$("#channel").addEventListener("keydown",e=>{if(e.key==="Enter")$("#startBtn").click()});
 poll();
 </script>
 </body>

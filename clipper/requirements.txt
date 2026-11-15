@@ -1,2 +1,4 @@
 streamlink>=7.0
 faster-whisper>=1.0
+# face cam finder; OpenCV 5 cannot read the bundled face model, so stay on 4.x
+opencv-python-headless>=4.8,<5

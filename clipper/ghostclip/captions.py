@@ -57,8 +57,15 @@ class Transcriber:
                 raise
 
     def _run(self, wav_path: str) -> list[Word]:
+        words = self._pass(wav_path, vad=True)
+        if not words:
+            # the voice filter can mistake speech over loud game audio or music for noise
+            words = self._pass(wav_path, vad=False)
+        return words
+
+    def _pass(self, wav_path: str, vad: bool) -> list[Word]:
         segments, _info = self._model.transcribe(
-            wav_path, language=self.language or None, word_timestamps=True, vad_filter=True,
+            wav_path, language=self.language or None, word_timestamps=True, vad_filter=vad,
             beam_size=5, condition_on_previous_text=False,
         )
         words = []
@@ -82,6 +89,7 @@ LAYOUTS = {
     #               width, height, caption x, y, font size, credit position
     "vertical_blur": (1080, 1920, 540, 1430, 84, r"{\an2\pos(540,630)}"),
     "vertical_crop": (1080, 1920, 540, 1350, 88, r"{\an8\pos(540,150)}"),
+    "stack":         (1080, 1920, 540, 1560, 84, r"{\an7\pos(24,18)}"),
     "original":      (1920, 1080, 960, 940, 76, r"{\an9\pos(1880,40)}"),
 }
 

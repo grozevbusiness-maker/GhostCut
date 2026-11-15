@@ -22,6 +22,9 @@ ff = find_tool("ffmpeg")
 src = [ff, "-hide_banner", "-loglevel", "error", "-re", "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30",
        "-f", "lavfi", "-i", "sine=frequency=330", "-c:v", "libx264", "-preset", "ultrafast", "-g", "60",
        "-c:a", "aac", "-f", "mpegts", "pipe:1"]
+if len(sys.argv) > 2:   # loop a video file as the "live stream" instead
+    src = [ff, "-hide_banner", "-loglevel", "error", "-re", "-stream_loop", "-1", "-i", sys.argv[2],
+           "-c", "copy", "-f", "mpegts", "pipe:1"]
 app = App(s, source_cmd=src, chat_source=SimChat)
 app.s.save = lambda: None   # don't touch the real settings file
 serve(app, port)

@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from . import framing
 from .captions import LAYOUTS, Transcriber, build_ass
 from .utils import run
 
@@ -29,11 +30,21 @@ def pick_encoder(ffmpeg: str, choice: str) -> list[str]:
     return enc
 
 
-def video_filter(layout: str, with_subs: bool) -> str:
+def video_filter(layout: str, with_subs: bool, plan=None) -> str:
     W, H = LAYOUTS.get(layout, LAYOUTS["vertical_blur"])[:2]
     subs = ",ass=captions.ass" if with_subs else ""
-    if layout == "vertical_crop":
-        return f"[0:v]scale=-2:{H}:flags=lanczos,crop={W}:{H},setsar=1{subs}[v]"
+    if layout == "stack" and plan is not None and plan.mode == "stack":
+        x, y, w, h = plan.cam
+        cam_h = 700
+        return ("[0:v]split[a][b];"
+                f"[a]crop=iw*{w}:ih*{h}:iw*{x}:ih*{y},scale={W}:{cam_h}:flags=lanczos,setsar=1[cam];"
+                f"[b]scale={W}:{H - cam_h}:force_original_aspect_ratio=increase:flags=lanczos,"
+                f"crop={W}:{H - cam_h},setsar=1[game];"
+                f"[cam][game]vstack=inputs=2{subs}[v]")
+    if layout in ("vertical_crop", "stack"):
+        cx = plan.center_x if plan is not None else 0.5
+        return (f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,"
+                f"crop={W}:{H}:'max(0,min(iw-{W},{cx:.4f}*iw-{W // 2}))':0,setsar=1{subs}[v]")
     if layout == "original":
         return (f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease:flags=lanczos,"
                 f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1{subs}[v]")
@@ -90,21 +101,33 @@ class ClipEditor:
                 try:
                     words = self.transcriber.transcribe(str(work / "audio.wav"))
                     transcript = " ".join(w.text for w in words)
+                    self.log(f"Captions: {len(words)} words" if words else "Captions: no speech heard in this clip")
                 except Exception as e:
-                    self.log(f"Captions failed for this clip ({str(e)[:150]}); saving it without captions")
+                    self.log(f"Captions failed for this clip ({e.__class__.__name__}: {str(e)[:200]}); saving it without captions")
             else:
                 self.log("Could not read the clip's audio: " + r.stderr.strip()[-200:])
+
+        layout, plan = self.s.layout, None
+        if layout in ("stack", "vertical_crop"):
+            try:
+                plan = framing.plan(self.ffmpeg, work, src, duration, self.s.facecam if layout == "stack" else "none")
+            except Exception as e:
+                plan = framing.Plan("crop", note=f"face detection failed: {e}")
+            if layout == "stack":
+                self.log(f"Framing: {'face cam on top' if plan.mode == 'stack' else 'center crop'} ({plan.note})")
+        cap_layout = "stack" if plan is not None and plan.mode == "stack" else (
+            "vertical_crop" if layout == "stack" else layout)
 
         credit = f"twitch.tv/{self.s.channel}" if self.s.credit and self.s.channel else ""
         with_subs = bool(words or credit)
         if with_subs:
             (work / "captions.ass").write_text(
-                build_ass(words, self.s.layout, duration, self.s.caption_font, credit), encoding="utf-8")
+                build_ass(words, cap_layout, duration, self.s.caption_font, credit), encoding="utf-8")
         fade_out = max(duration - 0.4, 0)
         enc = pick_encoder(self.ffmpeg, self.s.encoder)
         out_tmp = work / "out.mp4"
         cmd = ff + src + [
-            "-filter_complex", video_filter(self.s.layout, with_subs), "-map", "[v]", "-map", "0:a:0?",
+            "-filter_complex", video_filter(layout, with_subs, plan), "-map", "[v]", "-map", "0:a:0?",
             "-af", f"loudnorm=I=-14:TP=-1.5:LRA=11,afade=t=in:d=0.25,afade=t=out:st={fade_out:.2f}:d=0.4",
             *enc, "-fpsmax", "60", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
             "-movflags", "+faststart", "out.mp4",
