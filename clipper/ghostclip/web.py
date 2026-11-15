@@ -6,6 +6,7 @@ import importlib.util
 import json
 import mimetypes
 import os
+import socket
 import threading
 import time
 from collections import deque
@@ -433,9 +434,21 @@ class Handler(BaseHTTPRequestHandler):
             e.editor.transcriber = app.transcriber()
 
 
+class _Server(ThreadingHTTPServer):
+    # On Windows, SO_REUSEADDR (Python's default here) lets a second GhostClip bind the same
+    # port, so the "already running, just open the dashboard" check never fires and the old
+    # copy keeps answering. Take the port exclusively instead.
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 def serve(app: App, port: int) -> ThreadingHTTPServer:
     Handler.app = app
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    httpd = _Server(("127.0.0.1", port), Handler)
     httpd.daemon_threads = True
     threading.Thread(target=httpd.serve_forever, daemon=True, name="web").start()
     return httpd

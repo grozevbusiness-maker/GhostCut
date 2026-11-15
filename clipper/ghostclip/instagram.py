@@ -46,6 +46,43 @@ SHARED_RE = re.compile(r"(reel|post).{0,20}shared|shared.{0,20}(reel|post)|сп�
                        r"condivis|compartilhad|опубликован|udostępnion|paylaşıldı", re.I)
 
 
+# Newest reel on the logged-in account: its code and stored size (width x height).
+REEL_SHAPE_JS = """async ({uid, csrf}) => {
+  const H = {'x-ig-app-id': '936619743392459', 'x-requested-with': 'XMLHttpRequest', 'x-csrftoken': csrf};
+  const asJson = async (r) => { try { return JSON.parse(await r.text() || '{}'); } catch (e) { return {}; } };
+  const opts = (o) => ({credentials: 'include', signal: AbortSignal.timeout(15000), ...o});
+  try {
+    let items = [];
+    try {   // the reels tab
+      const r = await fetch('/api/v1/clips/user/', opts({method: 'POST',
+        body: new URLSearchParams({target_user_id: uid, page_size: '6', include_feed_video: 'true'}),
+        headers: {...H, 'content-type': 'application/x-www-form-urlencoded'}}));
+      items = ((await asJson(r)).items || []).map(i => i.media || {});
+    } catch (e) {}
+    if (!items.length) {   // fallback: the profile feed
+      const r = await fetch(`/api/v1/feed/user/${uid}/?count=6`, opts({headers: H}));
+      items = (await asJson(r)).items || [];
+    }
+    items.sort((a, b) => (b.taken_at || 0) - (a.taken_at || 0));
+    if (!items.length) return {error: 'no reels found'};
+    return {reels: items.slice(0, 6).map(m => {
+      const v = (m.video_versions || [])[0] || {};
+      return {code: m.code, w: m.original_width || v.width, h: m.original_height || v.height, taken_at: m.taken_at || 0};
+    })};
+  } catch (e) { return {error: String(e)}; }
+}"""
+
+
+def ig_user_id(cookies: dict) -> str:
+    """The logged-in account's numeric id: the ds_user_id cookie, or the start of sessionid
+    ("<id>%3A<token>..."), since ds_user_id isn't always set."""
+    uid = (cookies.get("ds_user_id") or "").strip()
+    if uid.isdigit():
+        return uid
+    m = re.match(r"(\d+)(?:%3A|:)", cookies.get("sessionid") or "")
+    return m.group(1) if m else ""
+
+
 def _any(words: list[str]) -> re.Pattern:
     return re.compile("^(" + "|".join(re.escape(w) for w in words) + ")$", re.I)
 
@@ -179,6 +216,7 @@ class Instagram:
     def _post(self, ctx, clip: Path, caption: str) -> None:
         name = clip.name
         step = "start"
+        started = time.time()
 
         def say(text):
             self.posts[name] = text
@@ -268,11 +306,63 @@ class Instagram:
             self._mark_posted(clip)
             page.wait_for_timeout(1500)
             page.keyboard.press("Escape")
+            self._report_shape(ctx, name, since=started)
         except Exception as e:
             first = str(e).splitlines()[0][:160]
             shot = self._debug(page, name, step)
             say(f"Stopped at {step}. Finish it in the Instagram window (caption copied).")
             self.log(f"Instagram: couldn't finish posting {name} at {step}: {first}. Screenshot: {shot}")
+
+    def _report_shape(self, ctx, name: str, since: float) -> None:
+        """Ask Instagram how big the new reel (and the few before it) came out, so a square crop
+        can't slip through unnoticed. Runs in its own tab: the posting tab may be navigating."""
+        def vertical(r) -> bool:
+            return bool(r.get("w") and r.get("h") and r["h"] / r["w"] > 1.7)
+
+        page = None
+        try:
+            cookies = {c["name"]: c["value"] for c in ctx.cookies([self.base])}
+            uid, csrf = ig_user_id(cookies), cookies.get("csrftoken", "")
+            if not uid:
+                self.log("Instagram: couldn't check the reel's size (no account id in the login cookies)")
+                return
+            page = ctx.new_page()
+            page.goto(self.base + "?hl=en", wait_until="domcontentloaded")
+            page.wait_for_timeout(2000)
+            info, reels = {}, []
+            for _ in range(8):   # the new reel can take a little while to show up in the list
+                try:
+                    info = page.evaluate(REEL_SHAPE_JS, {"uid": uid, "csrf": csrf}) or {}
+                except Exception as e:   # e.g. the page navigated under us: try again
+                    info = {"error": str(e).splitlines()[0][:100]}
+                reels = info.get("reels") or []
+                if reels and reels[0].get("w") and reels[0]["taken_at"] >= since - 120:
+                    break
+                page.wait_for_timeout(5000)
+            if not reels or reels[0]["taken_at"] < since - 120:
+                self.log(f"Instagram: couldn't find the new reel to check its size ({info.get('error', 'not listed yet')})")
+                return
+            new, older = reels[0], [r for r in reels[1:] if r.get("w") and r.get("h")]
+            url = f"{self.base}reel/{new.get('code')}/"
+            if vertical(new):
+                self.log(f"Instagram: reel is {new['w']}x{new['h']}, full 9:16 vertical ✓ {url}")
+            else:
+                self.posts[name] = f"Posted, but Instagram cropped it to {new.get('w')}x{new.get('h')}"
+                self.log(f"Instagram: WARNING reel is {new.get('w')}x{new.get('h')}, not full vertical (cropped) {url}")
+            cropped = [r for r in older if not vertical(r)]
+            if cropped:
+                self.log("Instagram: earlier reels that aren't full vertical: " + ", ".join(
+                    f"{self.base}reel/{r.get('code')}/ ({r.get('w')}x{r.get('h')})" for r in cropped))
+            elif older:
+                self.log(f"Instagram: the {len(older)} reels before it are full vertical too ✓")
+        except Exception as e:
+            self.log(f"Instagram: couldn't check the reel's size: {str(e).splitlines()[0][:120]}")
+        finally:
+            if page is not None:
+                try:
+                    page.close()
+                except Exception:
+                    pass
 
     def _set_original_crop(self, page, dialog) -> bool:
         """Instagram's website crops new videos to a square unless 'Original' is picked. Pick it.

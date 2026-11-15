@@ -17,6 +17,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Callable
 
+from .instagram import ig_user_id
 from .settings import app_dir
 
 FILE = app_dir() / "analytics.json"
@@ -181,7 +182,7 @@ class Analytics:
         try:
             page.goto("https://www.instagram.com/?hl=en", wait_until="domcontentloaded")
             page.wait_for_timeout(2000)
-            res = page.evaluate(IG_JS, {"username": clean_handle(self.s.ig_username), "uid": cookies.get("ds_user_id", ""),
+            res = page.evaluate(IG_JS, {"username": clean_handle(self.s.ig_username), "uid": ig_user_id(cookies),
                                         "csrf": cookies.get("csrftoken", "")})
         finally:
             page.close()
