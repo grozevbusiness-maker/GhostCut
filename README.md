@@ -11,3 +11,7 @@ What the test version does and doesn't do:
 - Accounts and the reel library are saved only in each visitor's own browser. Nothing is sent to a server.
 - Checkout is test mode only. Nobody can pay and nothing is charged.
 - The Business "Get in touch" form does not send anywhere yet.
+
+## GhostClip (Twitch auto-clipper)
+
+The [`clipper/`](clipper/) folder holds **GhostClip**, a separate Windows app that records a Twitch stream, reads chat, and saves captioned vertical clips of the moments chat goes wild for. See [clipper/README.md](clipper/README.md) to set it up.
