@@ -1,5 +1,6 @@
 @echo off
 cd /d "%~dp0"
+set "HF_HUB_DISABLE_SYMLINKS_WARNING=1"
 if not exist ".venv\Scripts\python.exe" (
   echo GhostClip isn't set up yet. Double-click setup_windows.bat first.
   pause

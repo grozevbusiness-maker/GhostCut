@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
+set "HF_HUB_DISABLE_SYMLINKS_WARNING=1"
 title GhostClip setup
 echo.
 echo   GhostClip setup
