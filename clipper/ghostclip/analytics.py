@@ -104,18 +104,29 @@ class Analytics:
                 views += d.get("views") or 0
                 posts += d.get("posts") or 0
                 followers += d.get("followers") or 0
-        made = posted = 0
-        d = Path(clips_dir)
-        if d.is_dir():
-            for f in d.glob("*.json"):
-                made += 1
-                try:
-                    posted += 1 if json.loads(f.read_text(encoding="utf-8")).get("instagram") else 0
-                except (OSError, ValueError):
-                    pass
+        made, posted = self._clip_counts(clips_dir)
         return {"platforms": plats, "history": self.data.get("history", [])[-120:], "running": sorted(self.running),
                 "total": {"views": views, "posts": posts, "followers": followers},
                 "ghostclip": {"made": made, "posted": posted}, "configured": self.configured()}
+
+    def _clip_counts(self, clips_dir: str) -> tuple[int, int]:
+        d = Path(clips_dir)
+        try:
+            key = (str(d), d.stat().st_mtime_ns)
+        except OSError:
+            return 0, 0
+        cached = getattr(self, "_counts", None)
+        if cached and cached[0] == key and time.time() - cached[2] < 30:
+            return cached[1]
+        made = posted = 0
+        for f in d.glob("*.json"):
+            made += 1
+            try:
+                posted += 1 if json.loads(f.read_text(encoding="utf-8")).get("instagram") else 0
+            except (OSError, ValueError):
+                pass
+        self._counts = (key, (made, posted), time.time())
+        return made, posted
 
     # -- plumbing ----------------------------------------------------------------
     def _store(self, platform: str, result: dict) -> None:

@@ -441,7 +441,7 @@ function renderClips(st){
       const kind={laugh:"😂 funny",hype:"🔥 hype",clip:"🎬 clip it",manual:"✂ manual"}[c.kind]||"clip";
       const capWarn=c.captions&&/^failed/.test(c.captions)?`<span class="badge warn" title="${esc(c.captions)}">no captions</span>`:"";
       return `<div class="card clip${st.settings.layout==="original"?" wide":""}" data-i="${i}">
-        <video src="${esc(c.url)}#t=0.5" preload="metadata" controls playsinline></video>
+        <video src="${esc(c.url)}" poster="${esc(c.thumb)}" preload="none" controls playsinline></video>
         <div class="body"><div class="t">${esc(c.channel||"")} <small>· ${esc(t)}</small></div>
         <div class="badges"><span class="badge k-${esc(c.kind)}">${kind}</span>${c.game?`<span class="badge">${esc(c.game)}</span>`:""}${c.length?`<span class="badge">${Math.round(c.length)}s</span>`:""}${capWarn}</div>
         <button class="igpost" data-ig="${i}">POST TO INSTAGRAM</button><div class="igstate"></div>

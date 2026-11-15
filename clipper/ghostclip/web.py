@@ -23,6 +23,7 @@ from .settings import MAX_STREAMS, ChannelView, Settings, app_dir, clean_channel
 from .utils import find_tool, open_path, run
 
 HERE = Path(__file__).resolve().parent
+CHUNK = 2 * 1024 * 1024
 
 
 class App:
@@ -37,6 +38,8 @@ class App:
         self.quit_event = threading.Event()
         self.lock = threading.RLock()
         self.instagram = Instagram(self.log)
+        self.thumb_lock = threading.Lock()
+        self._clips_cache = None
         self.analytics = Analytics(self.s, self.instagram, self.log)
 
     # -- helpers ---------------------------------------------------------------
@@ -143,8 +146,38 @@ class App:
         while e.state != "stopped":
             time.sleep(0.5)
 
+    def thumbnail(self, clip_name: str) -> Path | None:
+        """A small still of the clip (made once), so the dashboard doesn't load every video."""
+        clip = Path(self.s.clips_dir) / clip_name
+        if clip.suffix.lower() != ".mp4" or not clip.is_file():
+            return None
+        thumbs = Path(self.s.clips_dir) / ".thumbs"
+        out = thumbs / (clip.stem + ".jpg")
+        if out.is_file() and out.stat().st_mtime >= clip.stat().st_mtime:
+            return out
+        ff = self.ffmpeg()
+        if not ff:
+            return None
+        with self.thumb_lock:
+            if not out.is_file():
+                thumbs.mkdir(exist_ok=True)
+                run([ff, "-hide_banner", "-loglevel", "error", "-y", "-ss", "1", "-i", str(clip), "-frames:v", "1",
+                     "-vf", "scale=360:-2", "-q:v", "5", str(out)], timeout=30)
+        return out if out.is_file() else None
+
     def clips(self, limit: int = 40) -> list[dict]:
         d = Path(self.s.clips_dir)
+        try:
+            key = (str(d), d.stat().st_mtime_ns)
+        except OSError:
+            return []
+        if self._clips_cache and self._clips_cache[0] == key and time.time() - self._clips_cache[2] < 5:
+            return self._clips_cache[1]
+        out = self._list_clips(d, limit)
+        self._clips_cache = (key, out, time.time())
+        return out
+
+    def _list_clips(self, d: Path, limit: int) -> list[dict]:
         if not d.is_dir():
             return []
         files = sorted(d.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]
@@ -156,6 +189,7 @@ class App:
             except (OSError, ValueError):
                 pass
             info["url"] = "/clips/" + f.name
+            info["thumb"] = "/thumbs/" + f.name
             out.append(info)
         return out
 
@@ -244,10 +278,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json(self.app.state())
         elif path.startswith("/clips/"):
             self._file(Path(self.app.s.clips_dir) / Path(unquote(path[7:])).name)
+        elif path.startswith("/thumbs/"):
+            thumb = self.app.thumbnail(Path(unquote(path[8:])).name)
+            if thumb:
+                self._file(thumb, cache=True)
+            else:
+                self.send_error(404)
         else:
             self.send_error(404)
 
-    def _file(self, f: Path):
+    def _file(self, f: Path, cache: bool = False):
         if not f.is_file():
             return self.send_error(404)
         size = f.stat().st_size
@@ -260,7 +300,9 @@ class Handler(BaseHTTPRequestHandler):
                 end = int(b) if a and b else end
             except ValueError:
                 pass
-            end = min(end, size - 1)
+            # Send videos in small pieces: the browser asks for the next piece when it needs it,
+            # so a video never ties up one of the browser's few connections to the app.
+            end = min(end, size - 1, start + CHUNK - 1)
             self.send_response(206)
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         else:
@@ -268,6 +310,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", mimetypes.guess_type(f.name)[0] or "application/octet-stream")
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(end - start + 1))
+        if cache:
+            self.send_header("Cache-Control", "max-age=86400")
         self.end_headers()
         try:
             with f.open("rb") as fh:

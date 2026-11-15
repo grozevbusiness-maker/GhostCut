@@ -152,6 +152,10 @@ class ClipEditor:
             final = clips / f"{name}_{n}.mp4"
             n += 1
         shutil.move(str(out_tmp), final)
+        thumbs = clips / ".thumbs"
+        thumbs.mkdir(exist_ok=True)
+        run([self.ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-ss", "1", "-i", str(final), "-frames:v", "1",
+             "-vf", "scale=360:-2", "-q:v", "5", str(thumbs / (final.stem + ".jpg"))], timeout=30)
 
         choice = (getattr(self.s, "games", {}) or {}).get(self.s.channel, "auto")
         category = getattr(self.s, "category", "")
