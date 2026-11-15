@@ -62,8 +62,7 @@ GhostClip's browser window. For exact YouTube numbers, add a free YouTube Data A
 
 ## Other handy bits
 
-- The sun/moon button (top right) switches between light and dark mode.
-- While a clip is being made, a red flashing **Making a clip** badge shows at the top, the stream's
+- While a clip is being made, a **Making a clip** badge with a blinking red dot shows at the top, the stream's
   card says **CLIPPING**, and the browser tab title starts with 🔴.
 
 ## Updating

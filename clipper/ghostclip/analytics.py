@@ -178,16 +178,28 @@ class Analytics:
         cookies = {c["name"]: c["value"] for c in ctx.cookies(["https://www.instagram.com/"])}
         if not cookies.get("sessionid"):
             return {"ok": False, "error": "Log in to Instagram in the app's Instagram window first"}
+        uid = ig_user_id(cookies)
+        if not uid:
+            return {"ok": False, "error": "Couldn't tell which Instagram account is logged in. Log in again in the Instagram window"}
         page = ctx.new_page()
         try:
             page.goto("https://www.instagram.com/?hl=en", wait_until="domcontentloaded")
             page.wait_for_timeout(2000)
-            res = page.evaluate(IG_JS, {"username": clean_handle(self.s.ig_username), "uid": ig_user_id(cookies),
-                                        "csrf": cookies.get("csrftoken", "")})
+            res = page.evaluate(IG_JS, {"username": clean_handle(self.s.ig_username), "uid": uid,
+                                        "csrf": cookies.get("csrftoken", "")}) or {}
+            if res.get("error") or not res.get("reels_ok"):
+                # Instagram's data requests are refused (it rate-limits them): read the profile's
+                # public Reels page instead, the way a person would see it.
+                page_res = self._instagram_page(page, res.get("username") or clean_handle(self.s.ig_username))
+                if page_res.get("ok"):
+                    self.log("Analytics: instagram read from the profile page (" + "; ".join(res.get("notes") or [])[:160] + ")")
+                    return page_res
+                if res.get("error"):
+                    return {"ok": False, "error": f"{res['error']}. Profile page: {page_res.get('error')}"}
         finally:
             page.close()
-        if res.get("error"):
-            return {"ok": False, "error": res["error"]}
+        if res.get("notes"):   # some requests failed but a fallback worked: note which, for fixing later
+            self.log("Analytics: instagram partly read (" + "; ".join(res["notes"])[:200] + ")")
         reels = res.get("reels") or []
         top = sorted(reels, key=lambda r: r.get("views") or 0, reverse=True)[:5]
         return {"ok": True, "handle": res.get("username"), "followers": res.get("followers"),
@@ -195,6 +207,36 @@ class Analytics:
                 "views": sum(r.get("views") or 0 for r in reels), "likes": sum(r.get("likes") or 0 for r in reels),
                 "top": [{"title": r.get("caption") or "Reel", "views": r.get("views") or 0,
                          "url": f"https://www.instagram.com/reel/{r.get('code')}/"} for r in top]}
+
+    def _instagram_page(self, page, username: str) -> dict:
+        """Followers and post count from the profile's page description, views from the tiles
+        of its Reels tab. `page` is on instagram.com (logged in)."""
+        if not username:   # the "Profile" link in Instagram's side menu points at /<username>/
+            username = page.evaluate(IG_ME_JS) or ""
+        if not username:
+            return {"ok": False, "error": "couldn't find the account name (type it in the Instagram box above)"}
+        page.goto(f"https://www.instagram.com/{username}/reels/?hl=en", wait_until="domcontentloaded")
+        page.wait_for_timeout(3500)
+        desc = page.evaluate("""() => (document.querySelector('meta[name="description"]') || {}).content ||
+                                      (document.querySelector('meta[property="og:description"]') || {}).content || ''""")
+        items = self._scroll_collect(page, IG_TILES_JS, rounds=25)
+        followers = posts = None
+        m = re.search(r"([\d.,]+\s*[KMBkmb]?)\s+Followers", desc or "")
+        if m:
+            followers = parse_count(m.group(1))
+        m = re.search(r"([\d.,]+\s*[KMBkmb]?)\s+Posts", desc or "")
+        if m:
+            posts = parse_count(m.group(1))
+        if followers is None and not items:
+            return {"ok": False, "error": f"couldn't read instagram.com/{username}/reels"}
+        reels = [{"code": i.get("code"), "views": parse_count(i.get("views")) or 0, "title": i.get("title") or "Reel"}
+                 for i in items if i.get("code")]
+        top = sorted(reels, key=lambda r: r["views"], reverse=True)[:5]
+        return {"ok": True, "handle": username, "followers": followers,
+                "posts": len(reels) if reels else posts or 0, "all_posts": posts,
+                "views": sum(r["views"] for r in reels), "likes": None,
+                "top": [{"title": r["title"], "views": r["views"],
+                         "url": f"https://www.instagram.com/reel/{r['code']}/"} for r in top]}
 
     # -- TikTok ------------------------------------------------------------------
     def _tiktok(self, ctx) -> dict:
@@ -320,34 +362,101 @@ def iso_seconds(d: str) -> int:
 
 # -- page scripts ------------------------------------------------------------------
 
+# Every request is read as text first (Instagram sometimes answers with an empty body), and
+# each piece has a fallback: reels from the Reels tab or else the profile feed, the username
+# from the reels themselves, follower counts from the profile or else the account info.
+# If something still fails, the error says which request and its HTTP status.
 IG_JS = """async ({username, uid, csrf}) => {
-  const H = {'x-ig-app-id': '936619743392459', 'x-requested-with': 'XMLHttpRequest'};
-  try {
-    if (!username) {
-      const r = await fetch(`/api/v1/users/${uid}/info/`, {headers: H, credentials: 'include'});
-      username = (await r.json()).user.username;
-    }
-    const r2 = await fetch(`/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`, {headers: H, credentials: 'include'});
-    const p = (await r2.json()).data.user;
-    const reels = [];
-    let maxId = '', more = true, pages = 0;
-    while (more && pages < 40) {
-      const body = new URLSearchParams({target_user_id: p.id, page_size: '50', include_feed_video: 'true'});
-      if (maxId) body.set('max_id', maxId);
-      const r = await fetch('/api/v1/clips/user/', {method: 'POST', credentials: 'include', body,
-        headers: {...H, 'x-csrftoken': csrf, 'content-type': 'application/x-www-form-urlencoded'}});
-      const j = await r.json();
-      for (const it of (j.items || [])) {
-        const m = it.media || {};
-        reels.push({code: m.code, views: m.play_count || m.ig_play_count || m.view_count || 0,
-                    likes: m.like_count || 0, caption: ((m.caption && m.caption.text) || '').slice(0, 90)});
+  const H = {"x-ig-app-id": "936619743392459", "x-requested-with": "XMLHttpRequest", "x-csrftoken": csrf};
+  const notes = [];
+  const get = async (label, url, o = {}) => {
+    try {
+      const r = await fetch(url, {credentials: "include", signal: AbortSignal.timeout(20000), ...o,
+                                  headers: {...H, ...(o.headers || {})}});
+      const t = await r.text();
+      const title = ((t.match(/<title>([^<]{0,60})/) || [])[1] || "").trim();
+      if (!r.ok || !t.trim()) { notes.push(label + ": HTTP " + r.status + (t.trim() ? "" : ", empty answer") + (title ? " '" + title + "'" : "")); return null; }
+      try { return JSON.parse(t); } catch (e) { notes.push(label + ": not JSON (HTTP " + r.status + (title ? ", page '" + title + "'" : "") + ")"); return null; }
+    } catch (e) { notes.push(label + ": " + (e.name || e)); return null; }
+  };
+  const reel = (m) => ({code: m.code, views: m.play_count || m.ig_play_count || m.view_count || 0,
+                        likes: m.like_count || 0, caption: ((m.caption && m.caption.text) || "").slice(0, 90)});
+  const reels = [];
+  let owner = null, reelsOk = false;
+
+  // 1) the Reels tab
+  let maxId = "", more = true, pages = 0;
+  while (more && pages < 40) {
+    const body = new URLSearchParams({target_user_id: uid, page_size: "50", include_feed_video: "true"});
+    if (maxId) body.set("max_id", maxId);
+    const j = await get("reels list", "/api/v1/clips/user/", {method: "POST", body,
+                        headers: {"content-type": "application/x-www-form-urlencoded"}});
+    if (!j) break;
+    reelsOk = true;
+    for (const it of (j.items || [])) { const m = it.media || {}; owner = owner || m.user; reels.push(reel(m)); }
+    more = !!(j.paging_info && j.paging_info.more_available);
+    maxId = (j.paging_info && j.paging_info.max_id) || "";
+    pages++;
+  }
+  // 2) fallback: the profile feed, keeping the videos
+  if (!reelsOk) {
+    let next = "";
+    pages = 0;
+    do {
+      const j = await get("profile feed", "/api/v1/feed/user/" + uid + "/?count=33" + (next ? "&max_id=" + next : ""));
+      if (!j) break;
+      reelsOk = true;
+      for (const m of (j.items || [])) {
+        owner = owner || m.user;
+        if (m.media_type === 2 || m.product_type === "clips") reels.push(reel(m));
       }
-      more = !!(j.paging_info && j.paging_info.more_available);
-      maxId = (j.paging_info && j.paging_info.max_id) || '';
+      next = j.more_available ? (j.next_max_id || "") : "";
       pages++;
-    }
-    return {username, followers: p.edge_followed_by.count, posts: p.edge_owner_to_timeline_media.count, reels};
-  } catch (e) { return {error: 'Instagram didn\\'t answer as expected (' + e + ')'}; }
+    } while (next && pages < 40);
+  }
+
+  // 3) username, followers, post count
+  username = username || (owner && owner.username) || "";
+  let followers = null, posts = null;
+  if (username) {
+    const j = await get("profile", "/api/v1/users/web_profile_info/?username=" + encodeURIComponent(username));
+    const p = j && j.data && j.data.user;
+    if (p) { followers = p.edge_followed_by.count; posts = p.edge_owner_to_timeline_media.count; }
+  }
+  if (followers === null) {
+    const j = await get("account info", "/api/v1/users/" + uid + "/info/");
+    const u = j && j.user;
+    if (u) { followers = u.follower_count; posts = u.media_count; username = username || u.username; }
+  }
+  if (!reelsOk && followers === null) return {error: "Instagram didn't answer (" + notes.join("; ") + ")", username, notes};
+  return {username, followers, posts, reels, reels_ok: reelsOk, notes};
+}"""
+
+# The logged-in account's name, from Instagram's side menu ("Profile" link, or the profile picture's alt text).
+IG_ME_JS = """() => {
+  const skip = new Set(["explore", "reels", "direct", "accounts", "p", "reel", "stories", "about", "legal"]);
+  const name = (href) => { const m = (href || "").match(/^\\/([A-Za-z0-9._]+)\\/$/); return m && !skip.has(m[1]) ? m[1] : ""; };
+  for (const a of document.querySelectorAll('a[href]'))
+    if (/^profile$/i.test((a.innerText || "").trim()) && name(a.getAttribute("href"))) return name(a.getAttribute("href"));
+  for (const img of document.querySelectorAll('img[alt]')) {
+    const m = img.alt.match(/^([A-Za-z0-9._]+)'s profile picture$/);
+    if (m) return m[1];
+  }
+  return "";
+}"""
+
+# Reels-tab tiles: each links to /<user>/reel/<code>/ (or /reel/<code>/) and shows its view count.
+IG_TILES_JS = """() => {
+  const out = [], seen = new Set();
+  for (const a of document.querySelectorAll('a[href*="/reel/"]')) {
+    const m = a.getAttribute("href").match(/\\/reel\\/([A-Za-z0-9_-]+)/);
+    if (!m || seen.has(m[1])) continue;
+    seen.add(m[1]);
+    const nums = (a.innerText || "").split(/\\n/).map(s => s.trim()).filter(s => /^\\d[\\d.,]*\\s*[KMBkmb]?$/.test(s));
+    const img = a.querySelector("img[alt]");
+    out.push({code: m[1], views: nums[0] || "0", title: img ? img.alt.slice(0, 90) : ""});
+  }
+  return out;
 }"""
 
 TT_STATS_JS = """() => {
