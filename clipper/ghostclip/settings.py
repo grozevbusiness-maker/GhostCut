@@ -74,6 +74,13 @@ class Settings:
     encoder: str = "auto"              # auto | nvenc | x264
     ffmpeg_path: str = ""              # leave empty to find ffmpeg automatically
 
+    # Auto-posting to Instagram (see autopost.py)
+    auto_post: bool = False            # post the best new clips by themselves
+    auto_post_per_day: int = 5         # most posts in any 24 hours (by hand or automatic)
+    auto_post_gap: int = 60            # minutes between posts at least
+    auto_post_min_hype: float = 1.6    # only clips whose chat hit at least this x the clip line
+    auto_post_since: float = 0.0       # set when switched on: only clips made after this are posted
+
     # Analytics: your own accounts (where you post the clips)
     ig_username: str = ""              # empty = the account logged in to the Instagram window
     tiktok_handle: str = ""

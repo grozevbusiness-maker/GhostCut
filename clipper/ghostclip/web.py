@@ -17,6 +17,7 @@ from urllib.parse import unquote, urlparse
 
 from . import framing, games
 from .analytics import Analytics, clean_handle
+from .autopost import AutoPoster
 from .instagram import Instagram
 from .captions import Transcriber
 from .engine import Engine
@@ -43,6 +44,7 @@ class App:
         self._clips_cache = None
         self._checks_cache = None
         self.analytics = Analytics(self.s, self.instagram, self.log)
+        self.autopost = AutoPoster(self.s, self.instagram, self.log, lambda: bool(self.running()))
 
     # -- helpers ---------------------------------------------------------------
     def log(self, text: str) -> None:
@@ -119,7 +121,7 @@ class App:
             self.s.save()
             view = ChannelView(self.s, channel)
             eng = Engine(view, ff, self.transcriber(), lambda m, c=channel: self.log(f"[{c}] {m}"),
-                         source_cmd=self.source_cmd, chat_source=self.chat_source)
+                         on_clip=self.autopost.clip_made, source_cmd=self.source_cmd, chat_source=self.chat_source)
             self.engines[channel] = eng
             eng.start()
             return None
@@ -236,6 +238,7 @@ class App:
             "clips": self.clips(),
             "windows": os.name == "nt",
             "instagram": self.instagram.state(),
+            "autopost": self.autopost.state(),
             "analytics": self.analytics.summary(self.s.clips_dir),
             "games": games.choices(),
         }
@@ -435,8 +438,10 @@ class Handler(BaseHTTPRequestHandler):
             if k in data:
                 data[k] = clean_handle(str(data[k]))
         data.pop("channels", None)
+        data.pop("auto_post_since", None)   # set by the app itself when auto-posting is switched on
         app.s.update(data)
         app.s.save()
+        app.autopost.settings_changed()
         for e in app.engines.values():
             e.detector.scorer.update_words(app.s.laugh_words, app.s.hype_words, app.s.clip_phrases)
             e.editor.transcriber = app.transcriber()

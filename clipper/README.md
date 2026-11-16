@@ -51,6 +51,24 @@ window in `%APPDATA%\GhostClip\instagram_debug` (send it over and the next versi
 post in the window yourself (the caption is already copied, just paste it). Keep it to a few posts
 a day: lots of automatic posts in a row can make Instagram suspicious of the account.
 
+### Posting by itself
+
+In the Instagram panel, switch on **Post the best clips by themselves**. From then on GhostClip
+posts the strongest new clip whenever the limits allow, with nobody at the PC:
+
+- **Most posts a day** (default 5) counts every post in the last 24 hours, by hand or automatic.
+- **Minutes between** (default 60) is the shortest gap between two posts.
+- **Only moments above**: *Strong* posts only clips where chat went well past the clip line.
+  A clip you made yourself with ✂ always counts as strong.
+- Only clips made *after* you switch it on are posted (never the old backlog), each clip at
+  most once, and a moment older than 6 hours is skipped as stale.
+- After 2 failed posts in a row it pauses itself and says why. Fix the Instagram window, then
+  switch it off and on.
+
+GhostClip has to keep running with your streams started (press **Start**; it waits for streamers
+to go live). The Instagram window opens by itself when a post is due, and the PC is kept awake
+while streams run or auto-posting is on. A green **Auto-post 2/5** chip at the top shows it's on.
+
 ## Analytics
 
 Open the **Analytics** tab, type your TikTok and YouTube names (Instagram uses the account
@@ -80,18 +98,29 @@ face cam?** in Settings to the right corner.
 
 ## How it picks moments
 
-Every chat message is scored: laughing words and emotes, hype words, emoji spam, all-caps, and
-"clip it" requests (these count extra). Every second it adds up the last 8 seconds and compares
-that with **this channel's normal chat level**, so it works for a 20-viewer stream and a
-50,000-viewer one. Just a busy chat (giveaways, raids) isn't enough: a real share of the
-messages have to be laughing or hyped. Chat always reacts a few seconds after the moment, so
-the clip starts about 30 seconds *before* chat exploded and ends about 10 seconds after the peak.
+Every chat message is scored. **Laughing** (LMAO, LOL, KEKW, ICANT, 😂💀😭, channel emotes like
+kaicLUL), **shock** (NAHHH, HUH, WTF, OMG, NOOOO, ????) and **"clip it"** requests start a moment.
+**Celebrating** (LETS GOOO, POG, 🔥) only adds to one, and **W / L / GG** walls (sub gifts, raids)
+barely count. Every second it adds up the last 8 seconds and compares that with **this channel's
+normal chat level**, so it works for a 20-viewer stream and a 100,000-viewer one.
+
+It's built for giant chats on big days (a GTA 6 launch on Kai Cenat's stream) where chat never stops:
+
+- Each chatter counts once per 8 seconds, so one person's emote wall isn't a moment.
+- What a chat spams *all the time* (W, "GTA 6", "get sturdy", 🔥) fades out. A word only counts
+  fully when it surges above its own normal level for that channel.
+- Shock words count in short messages only ("NAHHH"), not in sentences ("nah he's bad").
+- A moment must peak clearly above the clip line, and every clip made in the last hour raises
+  the bar (an hourly budget set by the slider). Twice the budget is a hard ceiling.
+
+Chat always reacts a few seconds after the moment, so the clip starts about 30 seconds *before*
+chat exploded and ends about 10 seconds after the peak.
 
 ## Settings worth knowing
 
 | Setting | What it does |
 | --- | --- |
-| How easily to clip | Slide right for more clips, left for only the biggest moments. |
+| How easily to clip | Slide right for more clips, left for only the biggest moments. It shows about how many clips an hour you'll get on a busy stream: roughly 1, 3, 5, 12 and 18 from left to right (measured on real chat from Kai Cenat's GTA marathon, Fanum, Jason and Stable Ronaldo). Calm streams make fewer. |
 | Clip format | Face cam on top + gameplay (default), zoomed to the center only, whole picture on a blurred background, or original 16:9. |
 | Where is the face cam? | Automatic, or pick a corner if auto gets it wrong. |
 | Seconds before / after | How much of the build-up and the reaction to keep. |
@@ -121,7 +150,7 @@ Only clip and post streams you're allowed to. Many streamers welcome clippers; s
 pip install -r requirements.txt        # plus ffmpeg on PATH
 python -m ghostclip                     # dashboard
 python -m ghostclip --channel name      # start right away
-python -m unittest tests.test_hype      # detector tests
+python -m unittest tests.test_hype tests.test_autopost   # detector and auto-posting tests
 python tests/e2e_sim.py                 # full pipeline with a fake stream and fake chat
 python tests/demo_dashboard.py          # dashboard with a fake stream and fake chat
 ```
@@ -136,6 +165,7 @@ python tests/demo_dashboard.py          # dashboard with a fake stream and fake 
 | `ghostclip/framing.py` | Finds the face cam (bundled YuNet face model, MIT licence) |
 | `ghostclip/games.py` | Game list and hashtags |
 | `ghostclip/instagram.py` | The app's Chrome/Edge window: Instagram posting, runs stats jobs |
+| `ghostclip/autopost.py` | Posts the best new clips by itself, within the daily limit and gap |
 | `ghostclip/analytics.py` | Reads Instagram, TikTok and YouTube stats for the Analytics tab |
 | `ghostclip/engine.py` | Runs one stream's session; clips from all streams are edited one at a time |
 | `ghostclip/web.py`, `dashboard.html` | Local dashboard on 127.0.0.1 |

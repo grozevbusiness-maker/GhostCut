@@ -114,9 +114,16 @@ class Instagram:
     def open_window(self, url: str | None = None) -> None:
         self._submit(("open", url))
 
-    def post(self, clip: Path, caption: str) -> None:
+    def post(self, clip: Path, caption: str, done: Callable[[bool, str], None] | None = None) -> None:
+        """Queue a post. `done(ok, status)` is called on the browser thread when it's over."""
         self.posts[clip.name] = "Waiting to post..."
-        self._submit(("post", (clip, caption)))
+        if not self._submit(("post", (clip, caption, done))) and done:
+            done(False, self.status)
+
+    @property
+    def busy(self) -> bool:
+        """A post is waiting or in progress."""
+        return any(not re.match(r"(Posted|Stopped|Couldn't|Log in)", s) for s in self.posts.values())
 
     def call(self, fn: Callable, *args) -> None:
         """Run fn(browser_context, *args) on the browser thread (used for reading stats)."""
@@ -130,14 +137,15 @@ class Instagram:
         return {"available": self.available(), "window": self.window_open, "logged_in": self.logged_in,
                 "status": self.status, "posts": dict(self.posts)}
 
-    def _submit(self, job) -> None:
+    def _submit(self, job) -> bool:
         if not self.available():
             self.status = "Instagram posting isn't installed. Run update.bat."
-            return
+            return False
         if not self.thread or not self.thread.is_alive():
             self.thread = threading.Thread(target=self._run, daemon=True, name="browser")
             self.thread.start()
         self.jobs.put(job)
+        return True
 
     # -- browser thread (Playwright objects stay on this thread) --------------------
     def _run(self) -> None:
@@ -164,7 +172,9 @@ class Instagram:
                         ctx = self._check(ctx)
                         self.status = "Logged in ✓" if self.logged_in else "Log in to Instagram in the window that opened"
                     elif cmd == "post":
-                        self._post(ctx, *arg)
+                        clip, caption, done = arg
+                        ok = self._post(ctx, clip, caption)
+                        self._done(done, ok, self.posts.get(clip.name, ""))
                     elif cmd == "call":
                         fn, args = arg
                         fn(ctx, *args)
@@ -174,12 +184,20 @@ class Instagram:
                     self.log(f"Browser: {msg}")
                     if cmd == "post":
                         self.posts[arg[0].name] = f"Couldn't post: {msg}"
+                        self._done(arg[2], False, self.posts[arg[0].name])
                     ctx = self._check(ctx)
             if ctx is not None:
                 try:
                     ctx.close()
                 except Exception:
                     pass
+
+    def _done(self, done, ok: bool, status: str) -> None:
+        if done:
+            try:
+                done(ok, status)
+            except Exception as e:
+                self.log(f"Instagram: after-post step failed: {e}")
 
     def _ensure(self, pw, ctx):
         if ctx is not None:
@@ -217,7 +235,8 @@ class Instagram:
             return None
 
     # -- posting ------------------------------------------------------------------
-    def _post(self, ctx, clip: Path, caption: str) -> None:
+    def _post(self, ctx, clip: Path, caption: str) -> bool:
+        """Post one clip as a Reel. True if Instagram said it was shared."""
         name = clip.name
         step = "start"
         started = time.time()
@@ -237,7 +256,7 @@ class Instagram:
             self._check(ctx)
             if not self.logged_in:
                 say("Log in to Instagram first (click 'Instagram' at the top)")
-                return
+                return False
             self._click_any(page, "not_now", 1500)
 
             step = "the New post button"
@@ -311,11 +330,13 @@ class Instagram:
             page.wait_for_timeout(1500)
             page.keyboard.press("Escape")
             self._report_shape(ctx, name, since=started)
+            return True
         except Exception as e:
             first = str(e).splitlines()[0][:160]
             shot = self._debug(page, name, step)
             say(f"Stopped at {step}. Finish it in the Instagram window (caption copied).")
             self.log(f"Instagram: couldn't finish posting {name} at {step}: {first}. Screenshot: {shot}")
+            return False
 
     def _report_shape(self, ctx, name: str, since: float) -> None:
         """Ask Instagram how big the new reel (and the few before it) came out, so a square crop
