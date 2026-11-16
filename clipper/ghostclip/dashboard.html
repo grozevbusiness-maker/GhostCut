@@ -422,6 +422,9 @@ const FIELDS=[
   ["whisper_model","Caption accuracy","select",[["tiny","Fastest"],["base","Fast"],["small","Good (recommended)"],["medium","Best (slow without a GPU)"]]],
   ["language","Stream language","select",[["","Detect automatically"],["en","English"],["es","Spanish"],["pt","Portuguese"],["fr","French"],["de","German"],["it","Italian"],["ru","Russian"],["bg","Bulgarian"],["pl","Polish"],["tr","Turkish"],["ja","Japanese"],["ko","Korean"]]],
   ["credit","Show twitch.tv/channel on the clip","bool"],
+  ["censor_swears","Star out swear words in captions and post text","bool","","F*** instead of the word. Instagram shows clips with swearing to fewer people."],
+  ["mute_swears","Mute swear words in the audio","bool","","Silences the clip for the moment each swear word is said (about half a second)."],
+  ["censor_words","More words to censor","list","","Comma separated. The usual swear words and slurs are already covered."],
   ["sensitivity","How easily to clip","range","","Counts laughing, shock and \"clip it\". Spam chat always sends (W, LETS GO, 🔥, GTA 6) is ignored. The busier the hour, the higher the bar."],
   ["pre_roll","Seconds before chat reacts","number"],
   ["post_roll","Seconds after","number"],
@@ -439,7 +442,7 @@ const FIELDS=[
   ["recordings_dir","Recordings folder (temporary)","folder"],
   ["ffmpeg_path","ffmpeg location (leave empty to find it)","text"],
 ];
-const WIDE=new Set(["clips_dir","layout","facecam","captions","credit","sensitivity","quality","keep_full_recording","laugh_words","hype_words","clip_phrases","twitch_oauth","recordings_dir","ffmpeg_path"]);
+const WIDE=new Set(["clips_dir","layout","facecam","captions","credit","censor_swears","mute_swears","censor_words","sensitivity","quality","keep_full_recording","laugh_words","hype_words","clip_phrases","twitch_oauth","recordings_dir","ffmpeg_path"]);
 function buildForm(){
   const f=$("#setForm");f.innerHTML="";
   for(const [k,label,type,opts,hint] of FIELDS){

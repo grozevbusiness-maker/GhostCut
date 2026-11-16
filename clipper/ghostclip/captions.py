@@ -6,6 +6,8 @@ import threading
 from dataclasses import dataclass
 from typing import Callable
 
+from .profanity import censor_word
+
 
 @dataclass
 class Word:
@@ -123,10 +125,12 @@ def _ts(t: float) -> str:
     return f"{int(h)}:{int(m):02d}:{s:05.2f}"
 
 
-def chunk_words(words: list[Word], max_words: int = 3, max_chars: int = 16) -> list[list[Word]]:
+def chunk_words(words: list[Word], max_words: int = 3, max_chars: int = 16,
+                censor: list[str] | None = None) -> list[list[Word]]:
+    """censor: None leaves swearing as said; a list (maybe empty: extra words) stars it out."""
     chunks, cur = [], []
     for w in words:
-        text = _clean(w.text)
+        text = _clean(censor_word(w.text, censor) if censor is not None else w.text)
         if not text:
             continue
         w = Word(w.start, w.end, text)
@@ -145,7 +149,7 @@ def chunk_words(words: list[Word], max_words: int = 3, max_chars: int = 16) -> l
 
 
 def build_ass(words: list[Word], layout: str, duration: float, font: str = "Arial Black",
-              credit: str = "") -> str:
+              credit: str = "", censor: list[str] | None = None) -> str:
     W, H, cx, cy, size, credit_pos = LAYOUTS.get(layout, LAYOUTS["vertical_blur"])
     head = (
         "[Script Info]\nScriptType: v4.00+\nWrapStyle: 0\nScaledBorderAndShadow: yes\n"
@@ -161,7 +165,7 @@ def build_ass(words: list[Word], layout: str, duration: float, font: str = "Aria
     lines = []
     if credit:
         lines.append(f"Dialogue: 1,{_ts(0)},{_ts(duration)},Credit,,0,0,0,,{credit_pos}{credit}")
-    chunks = chunk_words(words)
+    chunks = chunk_words(words, censor=censor)
     for i, chunk in enumerate(chunks):
         nxt = chunks[i + 1][0].start if i + 1 < len(chunks) else duration
         c_end = min(chunk[-1].end + 0.5, nxt, duration)

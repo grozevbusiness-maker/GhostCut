@@ -121,6 +121,7 @@ chat exploded and ends about 10 seconds after the peak.
 | Setting | What it does |
 | --- | --- |
 | How easily to clip | Slide right for more clips, left for only the biggest moments. It shows about how many clips an hour you'll get on a busy stream: roughly 1, 3, 5, 12 and 18 from left to right (measured on real chat from Kai Cenat's GTA marathon, Fanum, Jason and Stable Ronaldo). Calm streams make fewer. |
+| Star out / mute swear words | On by default. Captions and post text show `F***` instead of swear words and slurs, and the audio goes silent for each one (about half a second). Instagram recommends clips with swearing less. Add your own words under *More words to censor*. Clips made before this was on keep their swearing. |
 | Clip format | Face cam on top + gameplay (default), zoomed to the center only, whole picture on a blurred background, or original 16:9. |
 | Where is the face cam? | Automatic, or pick a corner if auto gets it wrong. |
 | Seconds before / after | How much of the build-up and the reaction to keep. |
@@ -150,7 +151,7 @@ Only clip and post streams you're allowed to. Many streamers welcome clippers; s
 pip install -r requirements.txt        # plus ffmpeg on PATH
 python -m ghostclip                     # dashboard
 python -m ghostclip --channel name      # start right away
-python -m unittest tests.test_hype tests.test_autopost   # detector and auto-posting tests
+python -m unittest tests.test_hype tests.test_autopost tests.test_profanity   # unit tests
 python tests/e2e_sim.py                 # full pipeline with a fake stream and fake chat
 python tests/demo_dashboard.py          # dashboard with a fake stream and fake chat
 ```
@@ -162,6 +163,7 @@ python tests/demo_dashboard.py          # dashboard with a fake stream and fake 
 | `ghostclip/recorder.py` | streamlink → ffmpeg 10-second pieces, maps chat time to video time |
 | `ghostclip/editor.py` | Cuts, reframes, normalizes audio, burns in captions |
 | `ghostclip/captions.py` | faster-whisper word timings → styled ASS captions |
+| `ghostclip/profanity.py` | Swear words: stars in captions and post text, where to mute the audio |
 | `ghostclip/framing.py` | Finds the face cam (bundled YuNet face model, MIT licence) |
 | `ghostclip/games.py` | Game list and hashtags |
 | `ghostclip/instagram.py` | The app's Chrome/Edge window: Instagram posting, runs stats jobs |

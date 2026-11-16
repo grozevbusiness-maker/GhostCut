@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from . import framing, games
+from . import framing, games, profanity
 from .captions import LAYOUTS, Transcriber, build_ass
 from .utils import run
 
@@ -93,13 +93,17 @@ class ClipEditor:
             "file '{}'\n".format(str(p.resolve()).replace("\\", "/").replace("'", "'\\''")) for p in segments))
         src = ["-f", "concat", "-safe", "0", "-ss", f"{offset:.3f}", "-i", "list.txt", "-t", f"{duration:.3f}"]
 
+        censor = list(self.s.censor_words) if self.s.censor_swears else None
+        mute = getattr(self.s, "mute_swears", False)
         words, transcript, cap_status = [], "", "off"
-        if self.s.captions and self.transcriber and self.transcriber.available:
+        if (self.s.captions or mute) and self.transcriber and self.transcriber.available:
             r = run(ff + src + ["-vn", "-ac", "1", "-ar", "16000", "audio.wav"], cwd=work)
             if r.returncode == 0:
                 try:
                     words = self.transcriber.transcribe(str(work / "audio.wav"))
                     transcript = " ".join(w.text for w in words)
+                    if censor is not None:
+                        transcript = profanity.censor_text(transcript, censor)
                     cap_status = f"{len(words)} words" if words else "no speech heard"
                     self.log(f"Captions: {cap_status}")
                 except Exception as e:
@@ -121,16 +125,21 @@ class ClipEditor:
             "vertical_crop" if layout == "stack" else layout)
 
         credit = f"twitch.tv/{self.s.channel}" if self.s.credit and self.s.channel else ""
-        with_subs = bool(words or credit)
+        cap_words = words if self.s.captions else []
+        with_subs = bool(cap_words or credit)
         if with_subs:
             (work / "captions.ass").write_text(
-                build_ass(words, cap_layout, duration, self.s.caption_font, credit), encoding="utf-8")
+                build_ass(cap_words, cap_layout, duration, self.s.caption_font, credit, censor), encoding="utf-8")
+        muted = profanity.mute_spans(words, list(self.s.censor_words), duration=duration) if mute else []
+        if muted:
+            self.log(f"Muted {len(muted)} swear word{'s' if len(muted) != 1 else ''}")
         fade_out = max(duration - 0.4, 0)
+        mute_af = profanity.mute_filter(muted)
         enc = pick_encoder(self.ffmpeg, self.s.encoder)
         out_tmp = work / "out.mp4"
         cmd = ff + src + [
             "-filter_complex", video_filter(layout, with_subs, plan), "-map", "[v]", "-map", "0:a:0?",
-            "-af", f"loudnorm=I=-14:TP=-1.5:LRA=11,afade=t=in:d=0.25,afade=t=out:st={fade_out:.2f}:d=0.4",
+            "-af", (mute_af + "," if mute_af else "") + f"loudnorm=I=-14:TP=-1.5:LRA=11,afade=t=in:d=0.25,afade=t=out:st={fade_out:.2f}:d=0.4",
             *enc, "-fpsmax", "60", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
             "-movflags", "+faststart", "out.mp4",
         ]

@@ -71,6 +71,9 @@ class Settings:
     language: str = ""                 # "" = auto-detect, or "en", "es", ...
     caption_font: str = "Arial Black"
     credit: bool = True                # small "twitch.tv/channel" tag at the top
+    censor_swears: bool = True         # "F***" in captions and post text (see profanity.py)
+    mute_swears: bool = True           # silence the audio where a swear word is said
+    censor_words: list = field(default_factory=list)   # extra words to star out and mute
     encoder: str = "auto"              # auto | nvenc | x264
     ffmpeg_path: str = ""              # leave empty to find ffmpeg automatically
 

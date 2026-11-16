@@ -62,7 +62,7 @@ class App:
 
     def transcriber(self) -> Transcriber | None:
         """One speech model shared by every stream (it's big)."""
-        if not self.s.captions:
+        if not (self.s.captions or self.s.mute_swears):   # muting needs to know when words are said
             return None
         t = self._transcriber
         key = (self.s.whisper_model, self.s.whisper_device, self.s.language)
