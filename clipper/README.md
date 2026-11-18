@@ -38,36 +38,45 @@ your clips folder, ready for TikTok, Shorts or Reels.
 **Choosing your folder:** click **Change** next to "Clips" (or open **Settings**) and pick the
 folder you made. The default is `Videos\GhostClip\Clips`.
 
-## Posting to Instagram
+## Posting to Instagram, TikTok and YouTube
 
-1. Click **Instagram** (top right), then **Open Instagram window**. A Chrome window opens.
-2. Log in to the account you post on. You only do this once; it stays logged in.
-3. Press **POST TO INSTAGRAM** under a clip. GhostClip posts it as a Reel with its caption and
-   hashtags in that window, the way you would by hand, and marks the clip **✓ POSTED**.
+1. Click **Posting** (top right). For each of **Instagram**, **TikTok** and **YouTube**, press
+   **Log in**: GhostClip's own Chrome window opens on that site. Log in to the account you post
+   on. You only do this once per site; it stays logged in.
+2. Press **INSTAGRAM**, **TIKTOK** or **YOUTUBE** under a clip. GhostClip posts it in that window
+   the way you would by hand (an Instagram Reel, a TikTok, a YouTube Short) and marks the button
+   **✓** when it's done.
 
-It works with Instagram in English, Bulgarian and other common languages. If Instagram shows
+Every post credits the streamer: the caption always has a **🎥 Credit: twitch.tv/name** line
+(a clickable https link on YouTube), added to older clips' captions too, and the clip shows
+**twitch.tv/name** at the bottom left of the face cam. Swear words in the caption are starred out.
+On YouTube, the title is the first line of the caption.
+
+It works with the sites in English, Bulgarian and other common languages. If a site shows
 something unexpected, GhostClip stops at that step and tells you, and saves a screenshot of the
 window in `%APPDATA%\GhostClip\instagram_debug` (send it over and the next version can handle it). Finish the
 post in the window yourself (the caption is already copied, just paste it). Keep it to a few posts
-a day: lots of automatic posts in a row can make Instagram suspicious of the account.
+a day: lots of automatic posts in a row can make a platform suspicious of the account.
 
 ### Posting by itself
 
-In the Instagram panel, switch on **Post the best clips by themselves**. From then on GhostClip
-posts the strongest new clip whenever the limits allow, with nobody at the PC:
+In the Posting panel, switch on **Post the best clips by themselves** and tick where to post
+(**Instagram**, **TikTok**, **YouTube**). From then on GhostClip posts the strongest new clip to
+each of them whenever the limits allow, with nobody at the PC:
 
-- **Most posts a day** (default 5) counts every post in the last 24 hours, by hand or automatic.
-- **Minutes between** (default 60) is the shortest gap between two posts.
+- **Posts a day, each** (default 5) counts every post to that platform in the last 24 hours, by
+  hand or automatic.
+- **Minutes between** (default 60) is the shortest gap between two posts on one platform.
 - **Only moments above**: *Strong* posts only clips where chat went well past the clip line.
   A clip you made yourself with ✂ always counts as strong.
 - Only clips made *after* you switch it on are posted (never the old backlog), each clip at
-  most once, and a moment older than 6 hours is skipped as stale.
-- After 2 failed posts in a row it pauses itself and says why. Fix the Instagram window, then
-  switch it off and on.
+  most once per platform, and a moment older than 6 hours is skipped as stale.
+- After 2 failed posts in a row on a platform (or if it's logged out), posting there pauses and
+  says why; the others carry on. Fix the window, then switch auto-posting off and on.
 
 GhostClip has to keep running with your streams started (press **Start**; it waits for streamers
-to go live). The Instagram window opens by itself when a post is due, and the PC is kept awake
-while streams run or auto-posting is on. A green **Auto-post 2/5** chip at the top shows it's on.
+to go live). The window opens by itself when a post is due, and the PC is kept awake while streams
+run or auto-posting is on. A green **Auto-post IG 2 · TT 2 · YT 1** chip at the top shows it's on.
 
 ## Analytics
 
@@ -151,7 +160,7 @@ Only clip and post streams you're allowed to. Many streamers welcome clippers; s
 pip install -r requirements.txt        # plus ffmpeg on PATH
 python -m ghostclip                     # dashboard
 python -m ghostclip --channel name      # start right away
-python -m unittest tests.test_hype tests.test_autopost tests.test_profanity   # unit tests
+python -m unittest tests.test_hype tests.test_autopost tests.test_profanity tests.test_platforms
 python tests/e2e_sim.py                 # full pipeline with a fake stream and fake chat
 python tests/demo_dashboard.py          # dashboard with a fake stream and fake chat
 ```
@@ -166,7 +175,8 @@ python tests/demo_dashboard.py          # dashboard with a fake stream and fake 
 | `ghostclip/profanity.py` | Swear words: stars in captions and post text, where to mute the audio |
 | `ghostclip/framing.py` | Finds the face cam (bundled YuNet face model, MIT licence) |
 | `ghostclip/games.py` | Game list and hashtags |
-| `ghostclip/instagram.py` | The app's Chrome/Edge window: Instagram posting, runs stats jobs |
+| `ghostclip/instagram.py` | The app's Chrome/Edge window: Instagram posting, runs TikTok/YouTube posts and stats jobs |
+| `ghostclip/platforms.py` | TikTok and YouTube Shorts posting, credit line and caption rules for every platform |
 | `ghostclip/autopost.py` | Posts the best new clips by itself, within the daily limit and gap |
 | `ghostclip/analytics.py` | Reads Instagram, TikTok and YouTube stats for the Analytics tab |
 | `ghostclip/engine.py` | Runs one stream's session; clips from all streams are edited one at a time |

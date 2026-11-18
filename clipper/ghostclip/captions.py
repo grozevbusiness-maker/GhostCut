@@ -104,7 +104,7 @@ LAYOUTS = {
     #               width, height, caption x, y, font size, credit position
     "vertical_blur": (1080, 1920, 540, 1430, 84, r"{\an2\pos(540,630)}"),
     "vertical_crop": (1080, 1920, 540, 1350, 88, r"{\an8\pos(540,150)}"),
-    "stack":         (1080, 1920, 540, 1560, 84, r"{\an7\pos(24,18)}"),
+    "stack":         (1080, 1920, 540, 1560, 84, r"{\an1\pos(26,680)}"),   # bottom left of the face cam (700 px tall)
     "original":      (1920, 1080, 960, 940, 76, r"{\an9\pos(1880,40)}"),
 }
 
@@ -159,7 +159,9 @@ def build_ass(words: list[Word], layout: str, duration: float, font: str = "Aria
         "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
         "Alignment, MarginL, MarginR, MarginV, Encoding\n"
         f"Style: Cap,{font},{size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H96000000,-1,0,0,0,100,100,1,0,1,7,3,5,60,60,0,1\n"
-        f"Style: Credit,{font},{int(size * 0.45)},&H33FFFFFF,&H00FFFFFF,&H00000000,&H96000000,-1,0,0,0,100,100,1,0,1,3,1,8,40,40,0,1\n\n"
+        # the credit sits on a see-through dark tag (border style 3: a box in the outline colour) so
+        # it stays readable over a busy face cam
+        f"Style: Credit,{font},{int(size * 0.45)},&H00FFFFFF,&H00FFFFFF,&H5A000000,&H96000000,-1,0,0,0,100,100,1,0,3,7,0,8,40,40,0,1\n\n"
         "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
     lines = []

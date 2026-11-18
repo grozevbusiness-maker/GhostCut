@@ -10,11 +10,11 @@
    Colour only means something: brick = recording / clipping, amber = hype, sage = done. */
 :root{
   color-scheme:dark;
-  --bg:#151518; --surface:#1d1d21; --surface2:#25252a; --sunk:#18181b; --line:#2f2f35; --line2:#414148;
-  --ink:#f3f0ea; --muted:#b4b0a8; --faint:#85817a;
+  --bg:#24242a; --surface:#2e2e35; --surface2:#38383f; --sunk:#27272d; --line:#42424a; --line2:#56565f;
+  --ink:#f6f3ee; --muted:#c6c2ba; --faint:#9a968f;
   --accent:#ece7dd; --accent2:#c6c0b4; --hot:#a7825a;
   --hype:#d3a95a; --live:#c9564d; --ok:#93b59c; --warn:#cb9a58;
-  --chart:#b0aba1; --chart-hot:#d3a95a; --chart-th:#5a5752;
+  --chart:#bdb8ae; --chart-hot:#dcb265; --chart-th:#6a6760;
   --glow:238,229,212;   /* the warm light, as r,g,b */
   --mono:"Cascadia Mono","Cascadia Code",ui-monospace,Consolas,monospace;
   --r:7px; --ease:cubic-bezier(.2,.7,.2,1);
@@ -25,16 +25,17 @@ body{background:var(--bg);color:var(--ink);min-height:100vh;
   font:14px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 /* the light: its own fixed layer, so scrolling never repaints it */
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:radial-gradient(1400px 640px at 50% -240px,rgba(var(--glow),.17),transparent 72%),
-             radial-gradient(900px 520px at 100% 110%,rgba(var(--glow),.05),transparent 70%)}
-::selection{background:#4a4740}
+  background:radial-gradient(1500px 720px at 50% -240px,rgba(var(--glow),.24),transparent 74%),
+             radial-gradient(1000px 600px at 100% 110%,rgba(var(--glow),.08),transparent 70%),
+             radial-gradient(900px 600px at 0% 60%,rgba(var(--glow),.05),transparent 70%)}
+::selection{background:#5a564d}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;transition:background-color .16s,border-color .16s,color .16s,box-shadow .16s,opacity .16s,transform .08s}
 button:active:not(:disabled){transform:translateY(1px)}
 input,select,textarea{transition:border-color .16s,background-color .16s}
 [hidden]{display:none!important}
 :focus-visible{outline:1px solid var(--accent);outline-offset:2px}
-::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#38383e;border:3px solid var(--bg);border-radius:6px}::-webkit-scrollbar-thumb:hover{background:#4a4a51}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#4a4a52;border:3px solid var(--bg);border-radius:6px}::-webkit-scrollbar-thumb:hover{background:#5c5c65}::-webkit-scrollbar-track{background:transparent}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}}
 @keyframes fade{from{opacity:0}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
@@ -44,7 +45,7 @@ input,select,textarea{transition:border-color .16s,background-color .16s}
   text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;font-weight:600}
 
 header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:18px;padding:0 28px;height:56px;
-  background:rgba(24,24,27,.82);backdrop-filter:blur(14px) saturate(1.25);border-bottom:1px solid var(--line)}
+  background:rgba(40,40,46,.84);backdrop-filter:blur(14px) saturate(1.25);border-bottom:1px solid var(--line)}
 header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;
   background:linear-gradient(90deg,transparent,rgba(var(--glow),.34) 30%,rgba(var(--glow),.34) 70%,transparent)}
 .logo{display:flex;align-items:center;gap:11px;font-weight:600;font-size:13px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink)}
@@ -64,12 +65,12 @@ header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px
 
 main{max-width:1760px;margin:0 auto;padding:28px 28px 64px}
 @media (max-width:700px){main{padding:18px 16px 40px} header{padding:10px 16px;height:auto;flex-wrap:wrap;gap:10px 14px}}
-.banner{margin-bottom:20px;padding:11px 14px;border-radius:var(--r);border:1px solid #5a4630;background:#1c1710;color:#dcc095;font-size:13px}
+.banner{margin-bottom:20px;padding:11px 14px;border-radius:var(--r);border:1px solid #5a4630;background:#33291c;color:#e6cb9f;font-size:13px}
 #viewClipper,#viewAnalytics{animation:rise .24s var(--ease)}
 
 /* the lit surface every panel shares: a faint highlight on the top edge, a soft shadow below */
-.card,.summary{background:linear-gradient(180deg,rgba(var(--glow),.045),rgba(var(--glow),0) 120px),var(--surface);
-  border:1px solid var(--line);border-radius:var(--r);box-shadow:inset 0 1px 0 rgba(255,255,255,.075),0 1px 2px rgba(0,0,0,.25),0 14px 30px -22px rgba(0,0,0,.7)}
+.card,.summary{background:linear-gradient(180deg,rgba(var(--glow),.07),rgba(var(--glow),0) 140px),var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 1px 2px rgba(0,0,0,.2),0 14px 30px -22px rgba(0,0,0,.55)}
 
 /* top strip: four numbers, then actions */
 .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;margin-bottom:6px}
@@ -88,14 +89,14 @@ main{max-width:1760px;margin:0 auto;padding:28px 28px 64px}
 
 .btn{border:1px solid var(--line2);border-radius:var(--r);padding:9px 16px;font-weight:600;font-size:13px;background:var(--surface2);color:var(--ink);white-space:nowrap;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.btn:hover:not(:disabled){background:#2e2e34;border-color:#55555d}
+.btn:hover:not(:disabled){background:#42424a;border-color:#6a6a73}
 .btn:disabled{opacity:.4;cursor:default}
 .btn.grad{background:var(--accent);border-color:var(--accent);color:#141414;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 22px -12px rgba(var(--glow),.75)}
 .btn.grad:hover:not(:disabled){background:#fbf7ef;border-color:#fbf7ef;box-shadow:0 0 0 1px rgba(255,255,255,.1),0 8px 26px -10px rgba(var(--glow),.9)}
 .btn.ghost{background:transparent;box-shadow:none}
 .btn.ghost:hover:not(:disabled){background:rgba(255,255,255,.04)}
 .btn.stop{background:transparent;border-color:#6a312b;color:#e39a90;box-shadow:none}
-.btn.stop:hover:not(:disabled){background:#251413;border-color:#8a3d35}
+.btn.stop:hover:not(:disabled){background:#3a2220;border-color:#8a3d35}
 .btn.sm{padding:5px 11px;font-size:12.5px}
 .err{color:#d98a80;min-height:1.2em;margin:8px 2px;font-size:13px}
 
@@ -120,7 +121,7 @@ h2.sec code{color:var(--muted);font-family:var(--mono);font-size:11.5px;word-bre
 .scard .x{background:none;border:0;color:var(--faint);font-size:18px;line-height:1;padding:2px 4px;border-radius:4px}
 .scard .x:hover{color:var(--ink)}
 .icon-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:var(--r);border:1px solid var(--line2);background:transparent;color:var(--muted);font-size:13px}
-.icon-btn:hover:not(:disabled){color:var(--ink);border-color:#55555d;background:rgba(255,255,255,.05)}
+.icon-btn:hover:not(:disabled){color:var(--ink);border-color:#6a6a73;background:rgba(255,255,255,.06)}
 .icon-btn:disabled{opacity:.35;cursor:default}
 select,.scard select{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:7px 9px;font-size:12.5px;color:var(--muted)}
 .scard select{width:100%}
@@ -145,13 +146,13 @@ select,.scard select{background:var(--sunk);border:1px solid var(--line);border-
 .addcard>b{font-weight:600;font-size:14px;color:var(--muted)}
 .addcard input{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
 .addcard input::placeholder,.acc input::placeholder{color:var(--faint)}
-.addcard input:focus,select:focus,.set input:focus,.set select:focus,.set textarea:focus,.acc input:focus,.apgrid input:focus,.apgrid select:focus{outline:none;border-color:#7a766d;background:#1c1c20}
+.addcard input:focus,select:focus,.set input:focus,.set select:focus,.set textarea:focus,.acc input:focus,.apgrid input:focus,.apgrid select:focus{outline:none;border-color:#8a867d;background:#2a2a30}
 .addcard p{margin:0;color:var(--faint);font-size:12px}
 
 /* clips */
 .clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
 .clip{overflow:hidden;display:flex;flex-direction:column;animation:rise .3s var(--ease) backwards}
-.clip video{width:100%;aspect-ratio:9/16;background:#08080a;display:block;object-fit:contain;border-bottom:1px solid var(--line)}
+.clip video{width:100%;aspect-ratio:9/16;background:#141417;display:block;object-fit:contain;border-bottom:1px solid var(--line)}
 .clip.wide video{aspect-ratio:16/9}
 .clip .body{padding:12px;display:flex;flex-direction:column;gap:10px}
 .clip .t{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -165,6 +166,8 @@ select,.scard select{background:var(--sunk);border:1px solid var(--line);border-
 .row2{display:flex;gap:6px}
 .row2 button{flex:1;font-size:12px;padding:6px;border-radius:var(--r);border:1px solid var(--line);background:transparent;color:var(--muted)}
 .row2 button:hover{color:var(--ink);border-color:var(--line2);background:rgba(255,255,255,.03)}
+.posts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.posts .igpost{font-size:9.5px;letter-spacing:.1em;padding:8px 2px}
 .igpost{width:100%;border:1px solid var(--line2);border-radius:var(--r);padding:9px;font-weight:600;font-size:11px;letter-spacing:.14em;color:var(--ink);background:var(--surface2);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
 .igpost:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#141414;box-shadow:0 8px 22px -12px rgba(var(--glow),.75)}
@@ -202,7 +205,7 @@ input[type=range]{width:100%;accent-color:#c9c3b8}
 pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);color:var(--faint);white-space:pre-wrap;word-break:break-word}
 
 /* Instagram panel */
-.overlay{position:fixed;inset:0;z-index:40;background:rgba(6,6,8,.7);backdrop-filter:blur(3px);display:grid;place-items:center;padding:16px;animation:fade .16s ease-out}
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(14,14,18,.6);backdrop-filter:blur(3px);display:grid;place-items:center;padding:16px;animation:fade .16s ease-out}
 .panel{width:min(500px,100%);background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 120px),var(--surface);border:1px solid var(--line2);border-radius:9px;padding:24px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 30px 80px -30px rgba(0,0,0,.9);animation:rise .22s var(--ease)}
 .panel h3{margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600}
@@ -227,6 +230,14 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
 .apchip i{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(147,181,156,.55)}
 .apchip.bad{color:var(--warn);border-color:#5a4630}.apchip.bad i{background:var(--warn);box-shadow:none}
 .apchip.busy i{animation:blink 1.1s infinite}
+
+.accts{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.acct{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);font-size:13px}
+.acct b{font-weight:600;min-width:78px}
+.acct .as{flex:1;color:var(--muted);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apto{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:13px}
+.apto .toggle{align-items:center}
+.apto span.lbl{color:var(--faint);text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;font-weight:600;align-self:center}
 
 /* tabs, clip-making badge */
 .tabs{display:flex;gap:2px;align-self:stretch}
@@ -292,8 +303,8 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
   <span class="pill"><span class="dot" id="hdot"></span><span id="htext">Ready</span></span>
   <span class="making" id="making" hidden><i></i><span id="makingText">Making a clip</span></span>
   <span class="sp"></span>
-  <span class="apchip" id="apChip" hidden title="Auto-posting to Instagram"><i></i><span id="apChipText">Auto-post</span></span>
-  <button class="hbtn" id="igBtn"><span class="igmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17.2" cy="6.8" r=".6" fill="currentColor"/></svg></span><span id="igBtnText">Instagram</span></button>
+  <span class="apchip" id="apChip" hidden title="Auto-posting"><i></i><span id="apChipText">Auto-post</span></span>
+  <button class="hbtn" id="igBtn"><span class="igmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></svg></span><span id="igBtnText">Posting</span></button>
   <button class="hbtn" id="quit">Quit</button>
 </header>
 
@@ -326,7 +337,7 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
       <div><label for="a_key">YouTube API key (optional)</label><input id="a_key" type="password" placeholder="for exact YouTube numbers" spellcheck="false"></div>
       <button class="btn grad" id="aRefresh">Refresh stats</button>
     </div>
-    <div class="hint" id="aHint">Stats are read in GhostClip's browser window. Log in to Instagram there first (Instagram button, top right).</div>
+    <div class="hint" id="aHint">Stats are read in GhostClip's browser window. Log in to Instagram there first (Posting, top right).</div>
   </section>
   <section class="summary five" title="Views, posts and followers are added up across Instagram, TikTok and YouTube">
     <div class="kpi big"><span>Total views</span><b id="aViews">–</b></div>
@@ -361,27 +372,33 @@ pre.log{margin:0;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);col
 
 <div class="overlay" id="igPanel" hidden>
   <div class="panel">
-    <h3><span class="igmark" style="width:18px;height:18px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:18px;height:18px"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17.2" cy="6.8" r=".6" fill="currentColor"/></svg></span>Instagram</h3>
+    <h3><span class="igmark" style="width:18px;height:18px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></svg></span>Posting</h3>
+    <p>GhostClip posts in its own Chrome window, the way you would by hand: Instagram Reels, TikTok and YouTube Shorts. Log in to each account once in that window; it stays logged in. Every post credits the streamer with their twitch.tv link.</p>
+    <div class="accts">
+      <div class="acct" data-p="instagram"><span class="dot"></span><b>Instagram</b><span class="as">Not connected</span><button class="btn sm ghost" data-login="instagram">Log in</button></div>
+      <div class="acct" data-p="tiktok"><span class="dot"></span><b>TikTok</b><span class="as">Not connected</span><button class="btn sm ghost" data-login="tiktok">Log in</button></div>
+      <div class="acct" data-p="youtube"><span class="dot"></span><b>YouTube</b><span class="as">Not connected</span><button class="btn sm ghost" data-login="youtube">Log in</button></div>
+    </div>
     <div class="st"><span class="dot" id="igDot"></span><span id="igStatus">Not connected</span></div>
-    <ol>
-      <li>Click <b>Open Instagram window</b>. A Chrome window opens.</li>
-      <li>Log in to the account you post clips on. You only do this once.</li>
-      <li>Leave that window open (you can minimize it), then press <b>POST TO INSTAGRAM</b> under any clip.</li>
-    </ol>
-    <p>GhostClip posts the clip as a Reel with its caption and hashtags in that window, the way you would by hand. If Instagram shows something unexpected, it stops there so you can finish in the window. The caption is already copied.</p>
+    <p>Then press <b>INSTAGRAM</b>, <b>TIKTOK</b> or <b>YOUTUBE</b> under any clip. If a site shows something unexpected, GhostClip stops there so you can finish in the window. The caption is already copied.</p>
 
     <section class="auto">
       <label class="toggle switch"><input type="checkbox" id="apOn"><span><b>Post the best clips by themselves</b><br>
-        <small>Only clips made after you switch this on. GhostClip must stay open with your streams started; the Instagram window opens by itself when needed and your PC is kept awake.</small></span></label>
+        <small>Only clips made after you switch this on. GhostClip must stay open with your streams started; the window opens by itself when needed and your PC is kept awake.</small></span></label>
+      <div class="apto"><span class="lbl">Post to</span>
+        <label class="toggle"><input type="checkbox" data-apto="instagram"><span>Instagram</span></label>
+        <label class="toggle"><input type="checkbox" data-apto="tiktok"><span>TikTok</span></label>
+        <label class="toggle"><input type="checkbox" data-apto="youtube"><span>YouTube</span></label>
+      </div>
       <div class="apgrid">
-        <div><label for="apDay">Most posts a day</label><input id="apDay" type="number" min="1" max="15" step="1"></div>
+        <div><label for="apDay">Posts a day, each</label><input id="apDay" type="number" min="1" max="15" step="1"></div>
         <div><label for="apGap">Minutes between</label><input id="apGap" type="number" min="15" max="600" step="5"></div>
         <div><label for="apHype">Only moments above</label><select id="apHype"><option value="1.2">Any good one</option><option value="1.6">Strong</option><option value="2.2">Huge only</option></select></div>
       </div>
       <div class="apst" id="apState"></div>
     </section>
-    <p style="font-size:12.5px">Up to 5 a day, an hour apart, is a safe pace. Posting dozens in a row can make Instagram suspicious of the account.</p>
-    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn grad" id="igOpen" style="flex:1">Open Instagram window</button><button class="btn ghost" id="igClose">Close</button></div>
+    <p style="font-size:12.5px">Up to 5 a day on each platform, an hour apart, is a safe pace. Posting dozens in a row can make a platform suspicious of the account.</p>
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn grad" id="igOpen" style="flex:1">Open the window</button><button class="btn ghost" id="igClose">Close</button></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -563,6 +580,7 @@ function renderCards(st){
 }
 
 /* ---------- clips ---------- */
+const PLATS=["instagram","tiktok","youtube"],PNAME={instagram:"Instagram",tiktok:"TikTok",youtube:"YouTube"};
 const CLIPS=new Map();   // clip file name -> {el, c}: its card on the page and its latest data
 function clipCard(c,wide){
   const t=c.time?new Date(c.time).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
@@ -572,7 +590,7 @@ function clipCard(c,wide){
   el.innerHTML=`<video src="${esc(c.url)}" poster="${esc(c.thumb)}" preload="none" controls playsinline></video>
     <div class="body"><div class="t" title="${esc(c.file)}">${esc(c.channel||"")} <small>${esc(t)}</small></div>
     <div class="badges"><span class="badge k-${esc(c.kind)}">${kind}</span>${c.game?`<span class="badge">${esc(c.game)}</span>`:""}${c.length?`<span class="badge">${Math.round(c.length)}s</span>`:""}${capWarn}</div>
-    <button class="igpost" data-ig="${esc(c.file)}">POST TO INSTAGRAM</button><div class="igstate"></div>
+    <div class="posts">${PLATS.map(p=>`<button class="igpost" data-post="${p}" data-f="${esc(c.file)}" title="Post to ${PNAME[p]}">${PNAME[p].toUpperCase()}</button>`).join("")}</div><div class="igstate"></div>
     <div class="row2"><button data-copy="${esc(c.file)}">Copy caption</button><button data-file="${esc(c.file)}">Open file</button></div></div>`;
   return el;
 }
@@ -600,19 +618,32 @@ function renderClips(st){
   for(const c of clips){
     const o=CLIPS.get(c.file);if(!o)continue;
     o.c=c;
-    const b=o.b||(o.b=o.el.querySelector(".igpost")),s=o.s||(o.s=o.el.querySelector(".igstate")),state=posts[c.file];
-    const busy=state&&!/Posted|Stopped|Couldn't|Log in/.test(state),done=c.instagram||(state&&/Posted/.test(state));
-    setText(b,done?"✓ POSTED":busy?"POSTING…":"POST TO INSTAGRAM");b.classList.toggle("done",!!done);b.disabled=!!busy;
-    setText(s,state&&state!=="Posted ✓"?state:"");
+    const bs=o.bs||(o.bs=[...o.el.querySelectorAll(".igpost")]),s=o.s||(o.s=o.el.querySelector(".igstate"));
+    let note="";
+    for(const b of bs){
+      const p=b.dataset.post,state=(posts[p]||{})[c.file];
+      const busy=state&&!/Posted|Stopped|Couldn't|Log in/.test(state),done=c[p]||(state&&/Posted/.test(state));
+      setText(b,(done?"✓ ":"")+(busy?"POSTING…":PNAME[p].toUpperCase()));b.classList.toggle("done",!!done);b.disabled=!!busy;
+      b.title=done?`Posted to ${PNAME[p]}${typeof c[p]==="string"?" "+c[p]:""}. Click to post again.`:`Post to ${PNAME[p]}`;
+      if(state&&!/^Posted ✓$/.test(state))note=`${PNAME[p]}: ${state}`;
+    }
+    setText(s,note);
   }
 }
 
 function renderIG(ig){
-  if(!ig)return;const on=ig.window&&ig.logged_in;
-  const b=$("#igBtn"),tip=on?"Instagram: logged in":"Instagram: not connected";
+  if(!ig)return;const logins=ig.logins||{},on=ig.window&&PLATS.some(p=>logins[p]);
+  const b=$("#igBtn"),tip=PLATS.map(p=>`${PNAME[p]}: ${logins[p]?"logged in":"not connected"}`).join(" · ");
   if(b.title!==tip){b.title=tip;b.style.color=on?"var(--ink)":""}
-  setClass($("#igDot"),"dot"+(on?" ok":ig.window?" wait":""));
-  setText($("#igStatus"),!ig.available?"Instagram posting isn't installed yet. Close GhostClip and run update.bat.":(ig.status||"Not connected"));
+  setClass($("#igDot"),"dot"+(ig.window?" ok":""));
+  setText($("#igStatus"),!ig.available?"Posting isn't installed yet. Close GhostClip and run update.bat.":
+    ig.window?(ig.status||"Window open"):"The posting window is closed. Log in below, or press Open the window.");
+  for(const row of document.querySelectorAll(".acct")){
+    const p=row.dataset.p,ok=logins[p],known=ig.window&&ok!=null;
+    setClass(row.querySelector(".dot"),"dot"+(ok?" ok":known?" wait":""));
+    setText(row.querySelector(".as"),ok?"Logged in ✓":known?"Not logged in":"Open the window to check");
+    setText(row.querySelector("button"),ok?"Open":"Log in");
+  }
 }
 
 /* ---------- auto-posting ---------- */
@@ -624,29 +655,39 @@ function renderAuto(st){
   for(const [id,k] of [["#apDay","auto_post_per_day"],["#apGap","auto_post_gap"],["#apHype","auto_post_min_hype"]]){
     const el=$(id);if(document.activeElement!==el&&String(el.value)!==String(S[k]))el.value=S[k];
   }
-  const live=st.streams.some(s=>s.state==="running");
+  const to=S.auto_post_to||[];
+  for(const el of document.querySelectorAll("[data-apto]"))if(document.activeElement!==el)el.checked=to.includes(el.dataset.apto);
+  const live=st.streams.some(s=>s.state==="running"),pl=a.platforms||{},on=PLATS.filter(p=>pl[p]&&pl[p].on);
   let msg="";
   if(a.on){
-    msg=a.paused?a.paused:a.posting?`Posting ${a.posting}…`:
-      `${a.today} of ${a.limit} posted in the last 24 h`+(a.today>=a.limit?" · limit reached":a.next?` · next post after ${a.next}`:"")+
-      (a.waiting?` · ${a.waiting} clip${a.waiting>1?"s":""} waiting`:live?" · waiting for a strong moment":" · start a stream to make clips");
-    if(a.last&&!a.paused&&!a.posting)msg+=` · ${a.last}`;
+    if(!on.length)msg="Pick at least one platform to post to.";
+    else{
+      msg=a.posting?`Posting ${a.posting}…`:on.map(p=>{const x=pl[p];
+        return `${PNAME[p]} ${x.paused?"paused: "+x.paused:`${x.today}/${a.limit}`+(x.today>=a.limit?" (limit)":x.next?`, next after ${x.next}`:"")}`}).join(" · ");
+      if(!a.posting)msg+=a.waiting?` · ${a.waiting} clip${a.waiting>1?"s":""} waiting`:live?" · waiting for a strong moment":" · start a stream to make clips";
+      if(a.last&&!a.posting)msg+=` · ${a.last}`;
+    }
   }
-  const s=$("#apState");setText(s,msg);s.classList.toggle("bad",!!a.paused);
+  const s=$("#apState");setText(s,msg);s.classList.toggle("bad",!!a.paused||(a.on&&!on.length));
   const chip=$("#apChip");chip.hidden=!a.on;
-  setClass(chip,"apchip"+(a.paused?" bad":a.posting?" busy":""));
-  setText($("#apChipText"),a.paused?"Auto-post paused":a.posting?"Auto-posting…":`Auto-post ${a.today}/${a.limit}`);
+  setClass(chip,"apchip"+(a.all_paused||!on.length?" bad":a.paused?" bad":a.posting?" busy":""));
+  setText($("#apChipText"),a.all_paused?"Auto-post paused":a.posting?"Auto-posting…":`Auto-post ${on.map(p=>({instagram:"IG",tiktok:"TT",youtube:"YT"})[p]+" "+pl[p].today).join(" · ")||"off"}`);
   chip.title=msg;
 }
 async function saveAuto(patch){const r=await post("/api/settings",{settings:patch});if(r&&r.settings)S=r.settings}
 $("#apOn").onchange=async e=>{
   const on=e.target.checked;
-  if(on&&!confirm(`Post clips to Instagram by themselves?\n\nUp to ${$("#apDay").value} a day, at least ${$("#apGap").value} minutes apart, only clips made from now on. You can switch it off any time.`)){e.target.checked=false;return}
+  const names=(S.auto_post_to||[]).map(p=>PNAME[p]).join(", ")||"the platforms you pick";
+  if(on&&!confirm(`Post clips to ${names} by themselves?\n\nUp to ${$("#apDay").value} a day, at least ${$("#apGap").value} minutes apart, only clips made from now on. You can switch it off any time.`)){e.target.checked=false;return}
   await saveAuto({auto_post:on});toast(on?"Auto-posting on":"Auto-posting off");
 };
 for(const [id,k] of [["#apDay","auto_post_per_day"],["#apGap","auto_post_gap"],["#apHype","auto_post_min_hype"]])
   $(id).onchange=e=>saveAuto({[k]:e.target.value});
 $("#apChip").onclick=()=>$("#igPanel").hidden=false;
+for(const el of document.querySelectorAll("[data-apto]"))el.onchange=()=>{
+  const to=[...document.querySelectorAll("[data-apto]")].filter(x=>x.checked).map(x=>x.dataset.apto);
+  saveAuto({auto_post_to:to});
+};
 
 function render(st){
   ST=st;S=st.settings;
@@ -658,7 +699,7 @@ function render(st){
   if(changed(lg,log.length+"|"+(log[log.length-1]||""))){
     const atBottom=lg.scrollHeight-lg.scrollTop-lg.clientHeight<30;lg.textContent=log.join("\n");if(atBottom)lg.scrollTop=lg.scrollHeight;
   }
-  const miss=[];if(!st.checks.ffmpeg)miss.push("ffmpeg");if(!st.checks.streamlink)miss.push("streamlink");if(!st.checks.whisper)miss.push("captions");if(!st.checks.facecam)miss.push("face cam finder");if(!st.instagram?.available)miss.push("Instagram posting");
+  const miss=[];if(!st.checks.ffmpeg)miss.push("ffmpeg");if(!st.checks.streamlink)miss.push("streamlink");if(!st.checks.whisper)miss.push("captions");if(!st.checks.facecam)miss.push("face cam finder");if(!st.instagram?.available)miss.push("posting to Instagram, TikTok and YouTube");
   $("#banner").hidden=!miss.length;if(miss.length)setText($("#banner"),`Missing: ${miss.join(", ")}. Close GhostClip and double-click update.bat.`);
 }
 
@@ -708,7 +749,7 @@ $("#quit").onclick=async()=>{if(!confirm("Stop all recordings, finish clips and 
 $("#igBtn").onclick=()=>$("#igPanel").hidden=false;
 $("#igClose").onclick=()=>$("#igPanel").hidden=true;
 $("#igPanel").addEventListener("click",e=>{if(e.target.id==="igPanel")$("#igPanel").hidden=true});
-$("#igOpen").onclick=async()=>{await post("/api/ig/open");toast("Opening the Instagram window…")};
+$("#igOpen").onclick=async()=>{await post("/api/ig/open");toast("Opening the posting window…")};
 document.addEventListener("click",async e=>{
   const t=e.target.closest("button");if(!t)return;
   if(t.dataset.pick){
@@ -720,12 +761,17 @@ document.addEventListener("click",async e=>{
   if(t.dataset.open){const r=await post("/api/open",{target:t.dataset.open});if(!r.ok)toast(r.error)}
   if(t.dataset.file){const r=await post("/api/open",{target:"clip",file:t.dataset.file});if(!r.ok)toast(r.error)}
   if(t.dataset.copy){const c=CLIPS.get(t.dataset.copy)?.c;if(!c)return;try{await navigator.clipboard.writeText(c.post||c.file);toast("Caption copied")}catch{toast("Couldn't copy")}}
-  if(t.dataset.ig){
-    const c=CLIPS.get(t.dataset.ig)?.c,ig=ST.instagram||{};if(!c)return;
-    if(c.instagram&&!confirm("This clip was already posted. Post it again?"))return;
+  if(t.dataset.login){
+    const p=t.dataset.login;await post("/api/ig/open",{url:p});
+    toast((ST.instagram?.logins||{})[p]?`Opening ${PNAME[p]}…`:`Log in to ${PNAME[p]} in the window that opens`);
+  }
+  if(t.dataset.post){
+    const p=t.dataset.post,c=CLIPS.get(t.dataset.f)?.c,ig=ST.instagram||{};if(!c)return;
+    if(c[p]&&!confirm(`This clip was already posted to ${PNAME[p]}. Post it again?`))return;
     try{await navigator.clipboard.writeText(c.post||"")}catch{}
-    if(!ig.available||!ig.window||!ig.logged_in){$("#igPanel").hidden=false;if(ig.available&&!ig.window)post("/api/ig/open");toast("Log in to Instagram first");return}
-    const r=await post("/api/ig/post",{file:c.file});toast(r.ok?"Posting to Instagram…":r.error);
+    if(!ig.available){toast("Posting isn't installed yet. Run update.bat.");return}
+    if(ig.window&&(ig.logins||{})[p]===false){$("#igPanel").hidden=false;post("/api/ig/open",{url:p});toast(`Log in to ${PNAME[p]} first`);return}
+    const r=await post("/api/ig/post",{file:c.file,platform:p});toast(r.ok?`Posting to ${PNAME[p]}…`:r.error);
   }
 });
 

@@ -7,6 +7,9 @@ import re
 GAMES: dict[str, tuple[str, list[str], list[str]]] = {
     "fortnite": ("Fortnite", ["#fortnite", "#fortniteclips", "#fortnitememes", "#fortnitebattleroyale", "#epicgames"], ["fortnite"]),
     "valorant": ("Valorant", ["#valorant", "#valorantclips", "#valorantmemes", "#valorantgameplay", "#riotgames"], ["valorant"]),
+    # GTA VI first: "Grand Theft Auto VI" must not fall through to the GTA V tags below
+    "gta6": ("GTA 6", ["#gta6", "#gtavi", "#gta6gameplay", "#grandtheftauto6", "#gta"],
+             ["grand theft auto vi", "grand theft auto 6", "gta vi", "gta 6", "gta6"]),
     "gta": ("GTA V / GTA RP", ["#gta5", "#gtarp", "#gtaonline", "#gta", "#gtavclips"], ["grand theft auto", "gta"]),
     "minecraft": ("Minecraft", ["#minecraft", "#minecraftmemes", "#minecraftclips", "#minecraftbuilds"], ["minecraft"]),
     "lol": ("League of Legends", ["#leagueoflegends", "#lol", "#leagueclips", "#riotgames"], ["league of legends"]),

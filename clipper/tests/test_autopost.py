@@ -18,19 +18,20 @@ class NoSave(Settings):
 
 class FakeIG:
     def __init__(self, result=True, status="Posted ✓"):
-        self.result, self.status_text, self.posted = result, status, []
+        self.result, self.status_text, self.posted, self.captions = result, status, [], []
         self.busy = False
 
     @staticmethod
     def available():
         return True
 
-    def post(self, clip, caption, done=None):
-        self.posted.append(clip.name)
+    def post(self, clip, caption, done=None, platform="instagram", title=""):
+        self.posted.append(clip.name if platform == "instagram" else f"{platform}:{clip.name}")
+        self.captions.append(caption)
         if self.result:   # what instagram.py does on success
             meta = clip.with_suffix(".json")
             info = json.loads(meta.read_text(encoding="utf-8"))
-            info["instagram"] = time.strftime("%Y-%m-%d %H:%M")
+            info[platform] = time.strftime("%Y-%m-%d %H:%M")
             meta.write_text(json.dumps(info), encoding="utf-8")
         done(self.result, self.status_text if not self.result else "Posted ✓")
 
@@ -103,7 +104,7 @@ class TestAutoPost(unittest.TestCase):
         self.s.auto_post = False
         ap.settings_changed()
         self.switch_on(ap)                                     # off and on again clears the pause
-        self.assertEqual(ap.paused, "")
+        self.assertFalse(any(ap.paused.values()))
 
     def test_manual_clip_counts_as_strong(self):
         ig = FakeIG()
@@ -113,6 +114,30 @@ class TestAutoPost(unittest.TestCase):
         make_clip(self.dir, "by_hand", 0, kind="manual")
         ap._step()
         self.assertEqual(ig.posted, ["by_hand.mp4"])
+
+    def test_every_platform_gets_the_clip_with_credit(self):
+        ig = FakeIG()
+        self.s.auto_post_to = ["instagram", "tiktok", "youtube"]
+        ap = self.poster(ig)
+        self.switch_on(ap)
+        make_clip(self.dir, "best", 3.0, channel="kaicenat")
+        for _ in range(4):
+            ap._step()
+        self.assertEqual(ig.posted, ["best.mp4", "tiktok:best.mp4", "youtube:best.mp4"])
+        self.assertIn("twitch.tv/kaicenat", ig.captions[0])
+        self.assertIn("https://www.twitch.tv/kaicenat", ig.captions[2])   # YouTube: a clickable link
+        st = ap.state()["platforms"]
+        self.assertEqual([st[p]["today"] for p in ("instagram", "tiktok", "youtube")], [1, 1, 1])
+
+    def test_login_problem_pauses_only_that_platform(self):
+        ig = FakeIG(result=False, status="Log in to TikTok first")
+        self.s.auto_post_to = ["tiktok"]
+        ap = self.poster(ig)
+        self.switch_on(ap)
+        make_clip(self.dir, "a", 3.0)
+        ap._step()
+        self.assertTrue(ap.paused["tiktok"])
+        self.assertFalse(ap.paused["instagram"])
 
     def test_off_posts_nothing(self):
         ig = FakeIG()

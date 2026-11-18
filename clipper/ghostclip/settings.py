@@ -83,6 +83,7 @@ class Settings:
     auto_post_gap: int = 60            # minutes between posts at least
     auto_post_min_hype: float = 1.6    # only clips whose chat hit at least this x the clip line
     auto_post_since: float = 0.0       # set when switched on: only clips made after this are posted
+    auto_post_to: list = field(default_factory=lambda: ["instagram"])   # instagram, tiktok, youtube
 
     # Analytics: your own accounts (where you post the clips)
     ig_username: str = ""              # empty = the account logged in to the Instagram window

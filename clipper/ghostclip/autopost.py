@@ -1,13 +1,14 @@
-"""Post the best new clips to Instagram by themselves, within safe limits.
+"""Post the best new clips to Instagram, TikTok and YouTube Shorts by themselves, within safe limits.
 
 When auto-posting is on, GhostClip looks at the clips made since it was switched on and, when
-the daily limit and the gap between posts allow it, posts the strongest one through the
-Instagram window (the same steps as the POST TO INSTAGRAM button). It never posts the old
-backlog, never posts a clip twice, and stops itself after repeated failures so a problem
-can't turn into a string of broken posts.
+the daily limit and the gap between posts allow it, posts the strongest one through the app's
+browser window (the same steps as the post buttons under each clip), to every platform that's
+switched on. Each platform has its own count against the daily limit and gap. It never posts
+the old backlog, never posts a clip twice to the same place, and stops posting to a platform
+after repeated failures there, so a problem can't turn into a string of broken posts.
 
 Limits count every post made from GhostClip, by hand or automatically: posting dozens of
-reels a day from one account is what makes Instagram suspicious of it.
+videos a day from one account is what makes a platform suspicious of it.
 """
 from __future__ import annotations
 
@@ -19,8 +20,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from .platforms import NAMES, PLATFORMS, prepare
+
 MAX_AGE_HOURS = 6        # a moment older than this is stale: don't post it any more
-FAILS_BEFORE_PAUSE = 2   # in a row
+FAILS_BEFORE_PAUSE = 2   # in a row, on one platform
 
 
 def _read(meta: Path) -> dict:
@@ -37,9 +40,9 @@ def _write(meta: Path, info: dict) -> None:
         pass
 
 
-def _posted_at(info: dict) -> float | None:
-    """When the clip was posted to Instagram (any way), as a timestamp."""
-    when = info.get("instagram")
+def _posted_at(info: dict, platform: str = "instagram") -> float | None:
+    """When the clip was posted to that platform (by hand or automatically), as a timestamp."""
+    when = info.get(platform)
     if not when:
         return None
     try:
@@ -48,36 +51,53 @@ def _posted_at(info: dict) -> float | None:
         return None
 
 
+def _claim_key(platform: str) -> str:
+    return "auto_post" if platform == "instagram" else f"auto_{platform}"   # Instagram's is the older name
+
+
 class AutoPoster:
-    def __init__(self, settings, instagram, log: Callable[[str], None], running: Callable[[], bool],
+    def __init__(self, settings, browser, log: Callable[[str], None], running: Callable[[], bool],
                  start: bool = True):
         self.s = settings
-        self.ig = instagram
+        self.ig = browser               # the app's browser window (instagram.py): posts to every platform
         self.log = log
         self.running = running          # any stream recording or waiting to go live
         self.wake = threading.Event()
-        self.posting: str | None = None # clip being posted right now
-        self.fails = 0
-        self.paused = ""                # why auto-posting stopped itself ("" = not paused)
+        self.posting: str | None = None # "TikTok: clip.mp4" while a post is under way
+        self.fails = {p: 0 for p in PLATFORMS}
+        self.paused = {p: "" for p in PLATFORMS}   # why posting there stopped itself ("" = not paused)
         self.last = ""                  # what happened last, for the dashboard
         self._was_on = bool(settings.auto_post)
+        self._was_to = set(self.targets())
         self._awake = False
         self._state = None              # (time, counts) cache for state()
         if start:
             threading.Thread(target=self._loop, daemon=True, name="autopost").start()
 
+    def targets(self) -> list[str]:
+        """The platforms auto-posting posts to, in a fixed order."""
+        to = getattr(self.s, "auto_post_to", None)
+        if to is None:
+            to = ["instagram"]
+        return [p for p in PLATFORMS if p in to]
+
     # -- called from the app ----------------------------------------------------
     def settings_changed(self) -> None:
-        """Turning auto-posting on starts fresh: only clips made from now on, no old pause."""
+        """Turning auto-posting on starts fresh: only clips made from now on, no old pauses."""
         on = bool(self.s.auto_post)
+        to = set(self.targets())
         if on and not self._was_on:
             self.s.auto_post_since = time.time()
             self.s.save()
-            self.paused, self.fails = "", 0
-            self.log("Auto-posting on: the best new clips will be posted to Instagram by themselves")
+            self.paused = {p: "" for p in PLATFORMS}
+            self.fails = {p: 0 for p in PLATFORMS}
+            names = ", ".join(NAMES[p] for p in self.targets()) or "no platform picked yet"
+            self.log(f"Auto-posting on ({names}): the best new clips will be posted by themselves")
         elif not on and self._was_on:
             self.log("Auto-posting off")
-        self._was_on = on
+        for p in to - self._was_to:      # a platform switched on gets a clean start too
+            self.paused[p], self.fails[p] = "", 0
+        self._was_on, self._was_to = on, to
         self._state = None
         self.wake.set()
 
@@ -90,14 +110,24 @@ class AutoPoster:
         if self._state and time.time() - self._state[0] < 5:
             counts = self._state[1]
         else:
-            posted = self._recent_posts()
-            counts = {"posted": posted, "waiting": len(self._candidates()) if self.s.auto_post else 0}
+            targets = self.targets()
+            counts = {p: {"posted": self._recent_posts(p),
+                          "waiting": len(self._candidates(p)) if self.s.auto_post and p in targets else 0}
+                      for p in PLATFORMS}
             self._state = (time.time(), counts)
-        nxt = self._next_slot(counts["posted"])
-        return {"on": bool(self.s.auto_post), "paused": self.paused, "posting": self.posting,
-                "today": len(counts["posted"]), "limit": int(self.s.auto_post_per_day),
-                "next": datetime.fromtimestamp(nxt).strftime("%H:%M") if nxt > time.time() else "",
-                "waiting": counts["waiting"], "last": self.last}
+        plats = {}
+        for p in PLATFORMS:
+            nxt = self._next_slot(counts[p]["posted"])
+            plats[p] = {"on": p in self.targets(), "paused": self.paused[p], "today": len(counts[p]["posted"]),
+                        "next": datetime.fromtimestamp(nxt).strftime("%H:%M") if nxt > time.time() else "",
+                        "waiting": counts[p]["waiting"]}
+        on_plats = [plats[p] for p in self.targets()]
+        paused = "; ".join(f"{NAMES[p]}: {self.paused[p]}" for p in self.targets() if self.paused[p])
+        return {"on": bool(self.s.auto_post), "platforms": plats, "posting": self.posting, "last": self.last,
+                "limit": int(self.s.auto_post_per_day), "paused": paused,
+                "all_paused": bool(on_plats) and all(x["paused"] for x in on_plats),
+                "today": max((x["today"] for x in on_plats), default=0),
+                "waiting": max((x["waiting"] for x in on_plats), default=0)}
 
     # -- the loop -----------------------------------------------------------------
     def _loop(self) -> None:
@@ -112,47 +142,52 @@ class AutoPoster:
                 self.log(self.last)
 
     def _step(self) -> None:
-        if not self.s.auto_post or self.paused or self.posting or self.ig.busy:
+        """Post at most one clip (the browser does one thing at a time); the next step does the next."""
+        if not self.s.auto_post or self.posting or self.ig.busy or not self.ig.available():
             return
-        if not self.ig.available():
-            return
-        posted = self._recent_posts()
-        if len(posted) >= max(int(self.s.auto_post_per_day), 0):
-            return
-        if time.time() < self._next_slot(posted):
-            return
-        cands = self._candidates()
-        if not cands:
-            return
-        clip, info = cands[0]   # the strongest moment waiting
-        meta = clip.with_suffix(".json")
-        info["auto_post"] = "posting " + time.strftime("%Y-%m-%d %H:%M")
-        _write(meta, info)      # claimed: never picked twice, even after a restart
-        self.posting = clip.name
-        self.last = f"Posting {clip.name}"
-        self.log(f"Auto-post: posting {clip.name} ({info.get('kind', 'clip')}, {info.get('hype', 0)}x)")
-        self.ig.post(clip, info.get("post", ""), done=lambda ok, status, c=clip: self._finished(c, ok, status))
+        for p in self.targets():
+            if self.paused[p]:
+                continue
+            posted = self._recent_posts(p)
+            if len(posted) >= max(int(self.s.auto_post_per_day), 0) or time.time() < self._next_slot(posted):
+                continue
+            cands = self._candidates(p)
+            if cands:
+                clip, info = cands[0]   # the strongest moment waiting
+                self._post(p, clip, info)
+                return
 
-    def _finished(self, clip: Path, ok: bool, status: str) -> None:
+    def _post(self, p: str, clip: Path, info: dict) -> None:
+        info[_claim_key(p)] = "posting " + time.strftime("%Y-%m-%d %H:%M")
+        _write(clip.with_suffix(".json"), info)      # claimed: never picked twice, even after a restart
+        self.posting = f"{NAMES[p]}: {clip.name}"
+        self.last = f"Posting {clip.name} to {NAMES[p]}"
+        self.log(f"Auto-post: posting {clip.name} to {NAMES[p]} ({info.get('kind', 'clip')}, {info.get('hype', 0)}x)")
+        text, title = prepare(info, p, self.s)
+        self.ig.post(clip, text, done=lambda ok, status, c=clip, p=p: self._finished(p, c, ok, status),
+                     platform=p, title=title)
+
+    def _finished(self, p: str, clip: Path, ok: bool, status: str) -> None:
         meta = clip.with_suffix(".json")
         info = _read(meta)
-        info["auto_post"] = "posted" if ok else f"failed: {status}"[:200]
+        info[_claim_key(p)] = "posted" if ok else f"failed: {status}"[:200]
         _write(meta, info)
         self.posting = None
         self._state = None
+        name = NAMES[p]
         if ok:
-            self.fails = 0
-            self.last = f"Posted {clip.name} at {time.strftime('%H:%M')}"
+            self.fails[p] = 0
+            self.last = f"Posted {clip.name} to {name} at {time.strftime('%H:%M')}"
         else:
-            self.fails += 1
-            self.last = f"Couldn't post {clip.name}: {status}"
+            self.fails[p] += 1
+            self.last = f"Couldn't post {clip.name} to {name}: {status}"
             self.log(f"Auto-post: {self.last}")
-            if self.fails >= FAILS_BEFORE_PAUSE or status.startswith("Log in"):
-                self.paused = ("Log in to Instagram in the Instagram window, then switch auto-posting off and on"
-                               if status.startswith("Log in") else
-                               f"Paused after {self.fails} failed posts in a row. Check the Instagram window, "
-                               "then switch auto-posting off and on")
-                self.log(f"Auto-post: {self.paused}")
+            if self.fails[p] >= FAILS_BEFORE_PAUSE or status.startswith("Log in"):
+                self.paused[p] = (f"log in to {name} (Posting, top right), then switch auto-posting off and on"
+                                  if status.startswith("Log in") else
+                                  f"paused after {self.fails[p]} failed posts in a row. Check the window, "
+                                  "then switch auto-posting off and on")
+                self.log(f"Auto-post: {name} {self.paused[p]}")
         self.wake.set()
 
     # -- what to post, and when ----------------------------------------------------
@@ -165,12 +200,12 @@ class AutoPoster:
             if clip.is_file():
                 yield clip, meta
 
-    def _recent_posts(self) -> list[float]:
-        """Times of every post in the last 24 hours."""
+    def _recent_posts(self, platform: str = "instagram") -> list[float]:
+        """Times of every post to that platform in the last 24 hours."""
         day_ago = time.time() - 86400
         out = []
         for _clip, meta in self._metas():
-            t = _posted_at(_read(meta))
+            t = _posted_at(_read(meta), platform)
             if t and t >= day_ago:
                 out.append(t)
         return sorted(out)
@@ -178,7 +213,7 @@ class AutoPoster:
     def _next_slot(self, posted: list[float]) -> float:
         return (posted[-1] + float(self.s.auto_post_gap) * 60) if posted else 0.0
 
-    def _candidates(self) -> list[tuple[Path, dict]]:
+    def _candidates(self, platform: str = "instagram") -> list[tuple[Path, dict]]:
         since = max(float(self.s.auto_post_since or 0), time.time() - MAX_AGE_HOURS * 3600)
         out = []
         for clip, meta in self._metas():
@@ -188,7 +223,7 @@ class AutoPoster:
             except OSError:
                 continue
             info = _read(meta)
-            if not info or info.get("instagram") or info.get("auto_post"):
+            if not info or info.get(platform) or info.get(_claim_key(platform)):
                 continue
             if not info.get("post"):
                 continue

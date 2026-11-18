@@ -19,6 +19,7 @@ from . import framing, games
 from .analytics import Analytics, clean_handle
 from .autopost import AutoPoster
 from .instagram import Instagram
+from .platforms import PLATFORMS, prepare
 from .captions import Transcriber
 from .engine import Engine
 from .settings import MAX_STREAMS, ChannelView, Settings, app_dir, clean_channel
@@ -412,13 +413,15 @@ class Handler(BaseHTTPRequestHandler):
             clip = Path(app.s.clips_dir) / Path(data.get("file", "")).name
             if not clip.is_file():
                 return self._json({"ok": False, "error": "Clip not found"})
-            caption = data.get("caption") or ""
-            if not caption:
-                try:
-                    caption = json.loads(clip.with_suffix(".json").read_text(encoding="utf-8")).get("post", "")
-                except (OSError, ValueError):
-                    caption = ""
-            app.instagram.post(clip, caption)
+            platform = data.get("platform") or "instagram"
+            if platform not in PLATFORMS:
+                return self._json({"ok": False, "error": "Unknown platform"})
+            try:
+                info = json.loads(clip.with_suffix(".json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                info = {}
+            text, title = prepare(info, platform, app.s, data.get("caption") or None)
+            app.instagram.post(clip, text, platform=platform, title=title)
             self._json({"ok": True})
         elif path == "/api/quit":
             self._json({"ok": True})

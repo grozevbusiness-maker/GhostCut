@@ -10,6 +10,7 @@ from typing import Callable
 
 from . import framing, games, profanity
 from .captions import LAYOUTS, Transcriber, build_ass
+from .platforms import credit_line
 from .utils import run
 
 _encoder_cache: dict[str, list[str]] = {}
@@ -65,7 +66,8 @@ def post_text(channel: str, kind: str, transcript: str, tags: str = "") -> str:
         first = transcript.split(".")[0].strip()
         if 8 <= len(first) <= 80:
             hook = f'"{first}" 💀'
-    return f"{hook}\n\n{tags or games.hashtags(channel, 'none')}"
+    # always credit the streamer: the platforms ask for the original creator to be named
+    return f"{hook}\n\n{credit_line(channel)}\n\n{tags or games.hashtags(channel, 'none')}"
 
 
 class ClipEditor:

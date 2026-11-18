@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
+from . import platforms as plat
 from .settings import app_dir
 
 IG_URL = "https://www.instagram.com/"
@@ -100,7 +101,9 @@ class Instagram:
         self.window_open = False
         self.logged_in: bool | None = None
         self.status = "Not opened yet"
-        self.posts: dict[str, str] = {}   # clip file name -> what's happening with it
+        self.logins: dict[str, bool | None] = {p: None for p in plat.PLATFORMS}
+        # platform -> clip file name -> what's happening with it
+        self.posts: dict[str, dict[str, str]] = {p: {} for p in plat.PLATFORMS}
 
     # -- called from the dashboard (any thread) -----------------------------------
     _has_playwright = False   # remembered once found: the dashboard asks every second
@@ -112,18 +115,22 @@ class Instagram:
         return cls._has_playwright
 
     def open_window(self, url: str | None = None) -> None:
+        """url: a web address, or a platform name to open its login page."""
         self._submit(("open", url))
 
-    def post(self, clip: Path, caption: str, done: Callable[[bool, str], None] | None = None) -> None:
-        """Queue a post. `done(ok, status)` is called on the browser thread when it's over."""
-        self.posts[clip.name] = "Waiting to post..."
-        if not self._submit(("post", (clip, caption, done))) and done:
+    def post(self, clip: Path, caption: str, done: Callable[[bool, str], None] | None = None,
+             platform: str = "instagram", title: str = "") -> None:
+        """Queue a post. `done(ok, status)` is called on the browser thread when it's over.
+        title: YouTube only."""
+        self.posts[platform][clip.name] = "Waiting to post..."
+        if not self._submit(("post", (clip, caption, done, platform, title))) and done:
             done(False, self.status)
 
     @property
     def busy(self) -> bool:
-        """A post is waiting or in progress."""
-        return any(not re.match(r"(Posted|Stopped|Couldn't|Log in)", s) for s in self.posts.values())
+        """A post is waiting or in progress, on any platform."""
+        return any(not re.match(r"(Posted|Stopped|Couldn't|Log in)", s)
+                   for d in self.posts.values() for s in d.values())
 
     def call(self, fn: Callable, *args) -> None:
         """Run fn(browser_context, *args) on the browser thread (used for reading stats)."""
@@ -135,7 +142,8 @@ class Instagram:
 
     def state(self) -> dict:
         return {"available": self.available(), "window": self.window_open, "logged_in": self.logged_in,
-                "status": self.status, "posts": dict(self.posts)}
+                "logins": dict(self.logins), "status": self.status,
+                "posts": {p: dict(d) for p, d in self.posts.items()}}
 
     def _submit(self, job) -> bool:
         if not self.available():
@@ -165,16 +173,26 @@ class Instagram:
                     ctx = self._ensure(pw, ctx)
                     if cmd == "open":
                         page = ctx.pages[0] if ctx.pages else ctx.new_page()
-                        target = arg or (self.base + "?hl=en")
-                        if arg or ("instagram" not in page.url and self.base not in page.url):
+                        if arg in plat.LOGIN_URL:          # a platform: its login page (or the site)
+                            ctx = self._check(ctx)
+                            target = plat.LOGIN_URL[arg] if not self.logins.get(arg) else plat.SITE[arg]
                             page.goto(target, wait_until="domcontentloaded")
+                            name = plat.NAMES[arg]
+                            self.status = f"{name}: logged in ✓" if self.logins.get(arg) else                                 f"Log in to {name} in the window that opened"
+                        else:
+                            target = arg or (self.base + "?hl=en")
+                            if arg or ("instagram" not in page.url and self.base not in page.url):
+                                page.goto(target, wait_until="domcontentloaded")
+                            ctx = self._check(ctx)
+                            self.status = "Logged in ✓" if self.logged_in else "Log in to Instagram in the window that opened"
                         page.bring_to_front()
-                        ctx = self._check(ctx)
-                        self.status = "Logged in ✓" if self.logged_in else "Log in to Instagram in the window that opened"
                     elif cmd == "post":
-                        clip, caption, done = arg
-                        ok = self._post(ctx, clip, caption)
-                        self._done(done, ok, self.posts.get(clip.name, ""))
+                        clip, caption, done, platform, title = arg
+                        if platform == "instagram":
+                            ok = self._post(ctx, clip, caption)
+                        else:
+                            ok = self._post_other(ctx, platform, clip, caption, title)
+                        self._done(done, ok, self.posts[platform].get(clip.name, ""))
                     elif cmd == "call":
                         fn, args = arg
                         fn(ctx, *args)
@@ -183,8 +201,9 @@ class Instagram:
                     self.status = f"Browser window problem: {msg}"
                     self.log(f"Browser: {msg}")
                     if cmd == "post":
-                        self.posts[arg[0].name] = f"Couldn't post: {msg}"
-                        self._done(arg[2], False, self.posts[arg[0].name])
+                        posts = self.posts[arg[3]]
+                        posts[arg[0].name] = f"Couldn't post: {msg}"
+                        self._done(arg[2], False, posts[arg[0].name])
                     ctx = self._check(ctx)
             if ctx is not None:
                 try:
@@ -226,6 +245,10 @@ class Instagram:
                 raise RuntimeError("closed")
             cookies = ctx.cookies([self.base])
             self.logged_in = any(c["name"] == "sessionid" and c["value"] for c in cookies)
+            self.logins["instagram"] = self.logged_in
+            for p in ("tiktok", "youtube"):
+                self.logins[p] = any(c["name"] in plat.LOGIN_COOKIES[p] and c["value"]
+                                     for c in ctx.cookies([plat.SITE[p]]))
             self.window_open = True
             return ctx
         except Exception:
@@ -242,7 +265,7 @@ class Instagram:
         started = time.time()
 
         def say(text):
-            self.posts[name] = text
+            self.posts["instagram"][name] = text
             self.status = f"{name}: {text}"
 
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
@@ -338,6 +361,42 @@ class Instagram:
             self.log(f"Instagram: couldn't finish posting {name} at {step}: {first}. Screenshot: {shot}")
             return False
 
+    def _post_other(self, ctx, platform: str, clip: Path, caption: str, title: str) -> bool:
+        """TikTok or YouTube (see platforms.py). True if the site said it was posted."""
+        name, label = clip.name, plat.NAMES[platform]
+        where = ["start"]
+
+        def say(text):
+            self.posts[platform][name] = text
+            self.status = f"{label}: {name}: {text}"
+
+        def step(text):
+            where[0] = text
+
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        page.bring_to_front()
+        try:
+            if platform == "tiktok":
+                link = plat.post_tiktok(page, clip, caption, say, step)
+            else:
+                link = plat.post_youtube(page, clip, title, caption, say, step)
+            say("Posted ✓")
+            self.log(f"{label}: posted {name}" + (f" ({link})" if link else ""))
+            self._mark_posted(clip, platform, link)
+            self._check(ctx)
+            return True
+        except plat.NeedLogin:
+            self.logins[platform] = False
+            say(f"Log in to {label} first (Posting panel, top right)")
+            self.log(f"{label}: not logged in, so {name} wasn't posted")
+            return False
+        except Exception as e:
+            first = str(e).splitlines()[0][:160]
+            shot = self._debug(page, f"{platform}: {name}", where[0])
+            say(f"Stopped at {where[0]}. Finish it in the window (caption copied).")
+            self.log(f"{label}: couldn't finish posting {name} at {where[0]}: {first}. Screenshot: {shot}")
+            return False
+
     def _report_shape(self, ctx, name: str, since: float) -> None:
         """Ask Instagram how big the new reel (and the few before it) came out, so a square crop
         can't slip through unnoticed. Runs in its own tab: the posting tab may be navigating."""
@@ -372,7 +431,7 @@ class Instagram:
             if vertical(new):
                 self.log(f"Instagram: reel is {new['w']}x{new['h']}, full 9:16 vertical ✓ {url}")
             else:
-                self.posts[name] = f"Posted, but Instagram cropped it to {new.get('w')}x{new.get('h')}"
+                self.posts["instagram"][name] = f"Posted, but Instagram cropped it to {new.get('w')}x{new.get('h')}"
                 self.log(f"Instagram: WARNING reel is {new.get('w')}x{new.get('h')}, not full vertical (cropped) {url}")
             cropped = [r for r in older if not vertical(r)]
             if cropped:
@@ -490,13 +549,15 @@ class Instagram:
             return False
 
     @staticmethod
-    def _mark_posted(clip: Path) -> None:
+    def _mark_posted(clip: Path, platform: str = "instagram", link: str = "") -> None:
         meta = clip.with_suffix(".json")
         try:
             info = json.loads(meta.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             info = {}
-        info["instagram"] = time.strftime("%Y-%m-%d %H:%M")
+        info[platform] = time.strftime("%Y-%m-%d %H:%M")
+        if link:
+            info[platform + "_link"] = link
         try:
             meta.write_text(json.dumps(info, indent=2, ensure_ascii=False), encoding="utf-8")
         except OSError:

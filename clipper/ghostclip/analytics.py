@@ -123,7 +123,8 @@ class Analytics:
         for f in d.glob("*.json"):
             made += 1
             try:
-                posted += 1 if json.loads(f.read_text(encoding="utf-8")).get("instagram") else 0
+                info = json.loads(f.read_text(encoding="utf-8"))
+                posted += 1 if any(info.get(p) for p in PLATFORMS) else 0
             except (OSError, ValueError):
                 pass
         self._counts = (key, (made, posted), time.time())
